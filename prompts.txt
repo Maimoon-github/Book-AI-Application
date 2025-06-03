@@ -1,0 +1,12 @@
+You are building an application that needs to let users upload their own documents. Follow these simple instructions for Step 1:
+
+**Step 1: Document Import 📤**
+
+* Show a area where users can click to pick a file from their computer.
+* Make sure this file picker lets them select at least PDF files.
+* (Optional) you have to support more kinds of documents, also allow files like .epub, .mobi, .docx, or .txt. Each extra format may need its own parsing library.
+* Decide where to keep the uploaded files:
+
+  * **Temporary storage** if you only need them for immediate processing, then you can delete them later.
+
+That’s it—just implement a simple file picker that accepts PDFs (and others if you choose) and decide how and where to store the uploads.
