@@ -3,6 +3,19 @@ from django.contrib.auth.models import User
 import json
 
 class Book(models.Model):
+    CATEGORY_CHOICES = [
+        ('fiction', 'Fiction'),
+        ('non-fiction', 'Non-Fiction'),
+        ('science', 'Science'),
+        ('technology', 'Technology'),
+        ('business', 'Business'),
+        ('philosophy', 'Philosophy'),
+        ('self-help', 'Self Help'),
+        ('history', 'History'),
+        ('biography', 'Biography'),
+        ('other', 'Other'),
+    ]
+    
     title = models.CharField(max_length=255)
     filename = models.CharField(max_length=255)
     file_path = models.FileField(upload_to='books/')
@@ -19,9 +32,27 @@ class Book(models.Model):
         ],
         default='pending'
     )
+    # New fields
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other')
+    tags = models.CharField(max_length=255, blank=True)  # Comma-separated tags
+    description = models.TextField(blank=True)
+    author = models.CharField(max_length=255, blank=True)
+    current_page = models.IntegerField(default=0)  # Reading progress
+    last_read_at = models.DateTimeField(null=True, blank=True)
+    favorite = models.BooleanField(default=False)
     
     def __str__(self):
         return self.title
+    
+    def reading_progress_percentage(self):
+        if self.page_count > 0:
+            return min(100, int((self.current_page / self.page_count) * 100))
+        return 0
+    
+    def tag_list(self):
+        if self.tags:
+            return self.tags.split(",")
+        return []
 
 class Chapter(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='chapters')
@@ -38,6 +69,18 @@ class Chapter(models.Model):
     
     def __str__(self):
         return f"{self.book.title} - {self.title}"
+
+class ReadingActivity(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='reading_activities')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    start_page = models.IntegerField()
+    end_page = models.IntegerField(null=True, blank=True)
+    duration = models.DurationField(null=True, blank=True)  # Time spent reading in this session
+
+    def __str__(self):
+        return f"Reading session for {self.book.title} ({self.start_time.strftime('%Y-%m-%d')})"
 
 class ChatSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
