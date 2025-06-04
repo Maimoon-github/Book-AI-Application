@@ -142,10 +142,20 @@ def book_detail(request, book_id):
     book = get_object_or_404(Book, id=book_id)
     chapters = book.chapters.filter(parent=None)  # Root chapters only
     
+    # Get specific chapter if provided in query parameter
+    selected_chapter_id = request.GET.get('chapter')
+    selected_chapter = None
+    if selected_chapter_id:
+        try:
+            selected_chapter = Chapter.objects.get(id=selected_chapter_id, book=book)
+        except Chapter.DoesNotExist:
+            pass
+    
     context = {
         'book': book,
         'chapters': chapters,
-        'pdf_processing_available': PDF_PROCESSING_AVAILABLE
+        'pdf_processing_available': PDF_PROCESSING_AVAILABLE,
+        'selected_chapter': selected_chapter
     }
     return render(request, 'application/book_detail.html', context)
 
@@ -301,15 +311,37 @@ def send_message(request, book_id):
             if msg.message_type == 'human':
                 previous_messages.append({"role": "user", "content": msg.content})
             else:
-                previous_messages.append({"role": "assistant", "content": msg.content})
-        
-        # Get AI response
-        response = rag_system.teach_topic(
+                previous_messages.append({"role": "assistant", "content": msg.content})        # Get AI response with context
+        result = rag_system.teach_topic(
             message, 
             previous_messages, 
             chapter_filter, 
             session_id
         )
+        
+        # Extract response and context data
+        response = result["response"]
+        context_data = result["referenced_context"]
+        
+        # Process referenced chapters/content
+        referenced_chapters = []
+        if context_data:
+            for ctx in context_data:
+                chapter = Chapter.objects.filter(
+                    book=book,
+                    title__icontains=ctx['title'].split('(Part')[0].strip(),
+                    start_page__lte=ctx['start_page'],
+                    end_page__gte=ctx['start_page']
+                ).first()
+                
+                if chapter:
+                    referenced_chapters.append({
+                        'id': chapter.id,
+                        'title': ctx['title'],
+                        'start_page': ctx['start_page'] + 1,  # Convert to 1-indexed
+                        'end_page': ctx['end_page'] + 1,
+                        'excerpt': ctx['content'][:300] + '...' if len(ctx['content']) > 300 else ctx['content']
+                    })
         
         # Save AI response
         ai_message = ChatMessage.objects.create(
@@ -318,9 +350,16 @@ def send_message(request, book_id):
             content=response
         )
         
+        # Add the referenced chapters to the message
+        if referenced_chapters and len(referenced_chapters) > 0:
+            for ref_chapter in referenced_chapters:
+                chapter = Chapter.objects.get(id=ref_chapter['id'])
+                ai_message.context_chapters.add(chapter)
+        
         return JsonResponse({
             'response': response,
-            'message_id': ai_message.id
+            'message_id': ai_message.id,
+            'referenced_chapters': referenced_chapters
         })
         
     except Exception as e:

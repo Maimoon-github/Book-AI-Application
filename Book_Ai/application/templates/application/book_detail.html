@@ -251,6 +251,22 @@ $(document).ready(function() {
         $('.chapter-item').removeClass('bg-primary text-white');
         $(this).addClass('bg-primary text-white');
     });
+    
+    // Check for selected chapter from URL parameter
+    {% if selected_chapter %}
+        // Load the selected chapter content
+        loadChapterContent({{ selected_chapter.id }});
+        
+        // Highlight the selected chapter in the table of contents
+        const $selectedChapterItem = $('.chapter-item[data-chapter-id="{{ selected_chapter.id }}"]');
+        $selectedChapterItem.addClass('bg-primary text-white');
+        
+        // Scroll to the chapter item in the table of contents
+        const $chapterTree = $('#chapterTree');
+        if ($selectedChapterItem.length > 0 && $chapterTree.length > 0) {
+            $chapterTree.scrollTop($selectedChapterItem.position().top - $chapterTree.height()/2);
+        }
+    {% endif %}
 
     // Search functionality
     $('#searchBtn').click(function() {

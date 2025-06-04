@@ -2,6 +2,38 @@
 
 {% block title %}AI Teacher - {{ book.title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .referenced-content {
+        max-width: 95%;
+    }
+    
+    .accordion-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .chapter-excerpt {
+        font-size: 0.85rem;
+        background-color: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 4px;
+        white-space: pre-line;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .referenced-chapters .card-header {
+        background-color: #e9ecef;
+        font-size: 0.9rem;
+    }
+    
+    .referenced-chapters .card {
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
 {% block sidebar %}
 <hr>
 <h6>{{ book.title }}</h6>
@@ -98,8 +130,7 @@
                         </div>
                     </div>
 
-                    <!-- Existing messages -->
-                    {% for message in messages %}
+                    <!-- Existing messages -->                    {% for message in messages %}
                         <div class="message {{ message.message_type }}">
                             <div class="message-bubble">
                                 {% if message.message_type == 'ai' %}
@@ -109,6 +140,45 @@
                                 {% endif %}
                                 {{ message.content|linebreaks }}
                             </div>
+                            
+                            {% if message.message_type == 'ai' and message.context_chapters.exists %}
+                                <div class="referenced-content mt-2">
+                                    <div class="accordion" id="accordionReferences{{ message.id }}">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" 
+                                                        data-bs-toggle="collapse" 
+                                                        data-bs-target="#collapseReferences{{ message.id }}" 
+                                                        aria-expanded="false">
+                                                    <i class="fas fa-book-open me-2"></i> View Referenced Content ({{ message.context_chapters.count }} sections)
+                                                </button>
+                                            </h2>
+                                            <div id="collapseReferences{{ message.id }}" class="accordion-collapse collapse">
+                                                <div class="accordion-body">
+                                                    <div class="referenced-chapters">
+                                                        {% for chapter in message.context_chapters.all %}                                                                <div class="card mb-2">
+                                                                    <div class="card-header py-1 d-flex justify-content-between align-items-center">
+                                                                        <div>
+                                                                            <strong>{{ chapter.title }}</strong>
+                                                                            <small class="ms-2 text-muted">(Pages {{ chapter.start_page|add:1 }}-{{ chapter.end_page|add:1 }})</small>
+                                                                        </div>
+                                                                        <a href="{% url 'book_detail' book.id %}?chapter={{ chapter.id }}" class="btn btn-sm btn-outline-primary">
+                                                                            <i class="fas fa-eye"></i> View in Book
+                                                                        </a>
+                                                                    </div>
+                                                                    <div class="card-body py-2">
+                                                                        <p class="mb-0 chapter-excerpt">{{ chapter.content|truncatechars:300 }}</p>
+                                                                    </div>
+                                                                </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
                             <small class="text-muted d-block mt-1">{{ message.timestamp|date:"H:i" }}</small>
                         </div>
                     {% endfor %}
@@ -192,15 +262,14 @@ function sendMessage() {
         api_key: apiKey,
         model: $('#modelSelect').val(),
         chapter_filter: $('#chapterFilter').val()
-    };
-
-    $.ajax({
+    };    $.ajax({
         url: `/api/chat/{{ book.id }}/send/`,
         method: 'POST',
         data: JSON.stringify(data),
         contentType: 'application/json',
         success: function(response) {
-            addMessage('ai', response.response);
+            // Add the AI response
+            addMessage('ai', response.response, response.referenced_chapters);
         },
         error: function(xhr) {
             const error = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred';
@@ -213,14 +282,59 @@ function sendMessage() {
     });
 }
 
-function addMessage(type, content) {
-    const messageHtml = `
+function addMessage(type, content, referencedChapters = null) {
+    let messageHtml = `
         <div class="message ${type}">
             <div class="message-bubble">
                 <i class="fas fa-${type === 'ai' ? 'robot' : 'user'}"></i>
                 ${content.replace(/\n/g, '<br>')}
-            </div>
-            <small class="text-muted d-block mt-1">${new Date().toLocaleTimeString()}</small>
+            </div>`;
+            
+    // If this is an AI message and we have referenced chapters, add them
+    if (type === 'ai' && referencedChapters && referencedChapters.length > 0) {
+        messageHtml += `
+            <div class="referenced-content mt-2">
+                <div class="accordion" id="accordionReferences${Date.now()}">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseReferences${Date.now()}" 
+                                    aria-expanded="false">
+                                <i class="fas fa-book-open me-2"></i> View Referenced Content (${referencedChapters.length} sections)
+                            </button>
+                        </h2>
+                        <div id="collapseReferences${Date.now()}" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <div class="referenced-chapters">`;
+        
+        referencedChapters.forEach((chapter, index) => {
+            messageHtml += `                <div class="card mb-2">
+                    <div class="card-header py-1 d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${chapter.title}</strong>
+                            <small class="ms-2 text-muted">(Pages ${chapter.start_page}-${chapter.end_page})</small>
+                        </div>
+                        <a href="{% url 'book_detail' book.id %}?chapter=${chapter.id}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> View in Book
+                        </a>
+                    </div>
+                    <div class="card-body py-2">
+                        <p class="mb-0 chapter-excerpt">${chapter.excerpt}</p>
+                    </div>
+                </div>`;
+        });
+        
+        messageHtml += `
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }
+    
+    messageHtml += `<small class="text-muted d-block mt-1">${new Date().toLocaleTimeString()}</small>
         </div>
     `;
     
