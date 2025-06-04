@@ -1,4 +1,4 @@
-*# Book-AI-Application
+# Book-AI-Application
 
 Okay, here's a step-by-step guide on how to build an application that can import a PDF or book-related document, identify its topics or chapters, and break them into separate "chunks" with their page information:
 
