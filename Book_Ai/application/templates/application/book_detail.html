@@ -20,21 +20,84 @@
 {% block content %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="col-12">            <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1><i class="fas fa-book"></i> {{ book.title }}</h1>
-                    <p class="text-muted">{{ book.filename }} • {{ book.page_count }} pages</p>
+                    <h1>
+                        <i class="fas fa-book"></i> {{ book.title }}
+                        <button type="button" class="btn btn-sm btn-link text-danger toggle-favorite" data-book-id="{{ book.id }}" data-favorite="{{ book.favorite|yesno:'true,false' }}">
+                            <i class="fas fa-heart{% if not book.favorite %}-broken{% endif %} fa-lg"></i>
+                        </button>
+                    </h1>
+                    <p class="text-muted">
+                        {% if book.author %}<strong>{{ book.author }}</strong> • {% endif %}
+                        {{ book.filename }} • {{ book.page_count }} pages • 
+                        <span class="badge bg-secondary">{{ book.get_category_display|default:"Uncategorized" }}</span>
+                        {% if book.tags %}
+                            {% for tag in book.tag_list %}
+                                <span class="badge bg-info">{{ tag }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </p>
+                    {% if book.description %}
+                        <p><em>{{ book.description }}</em></p>
+                    {% endif %}
                 </div>
                 <div>
+                    <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#editBookModal">
+                        <i class="fas fa-edit"></i> Edit Book Info
+                    </button>
+                    <br>
                     {% if book.processing_status == 'completed' and pdf_processing_available %}
-                        <a href="{% url 'chat_interface' book.id %}" class="btn btn-success">
+                        <a href="{% url 'chat_interface' book.id %}" class="btn btn-success mb-2">
                             <i class="fas fa-comments"></i> Chat with AI
                         </a>
+                        <br>
                     {% endif %}
                     <a href="{% url 'home' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left"></i> Back
                     </a>
+                </div>
+            </div>
+            
+            <!-- Reading Progress -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-bookmark"></i> Reading Progress</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" 
+                                     style="width: {{ book.reading_progress_percentage }}%;" 
+                                     aria-valuenow="{{ book.reading_progress_percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ book.reading_progress_percentage }}%
+                                </div>
+                            </div>
+                            <div class="mt-3 d-flex justify-content-between">
+                                <span>Page 1</span>
+                                <span>Current: Page {{ book.current_page }} of {{ book.page_count }}</span>
+                                <span>Page {{ book.page_count }}</span>
+                            </div>
+                            <div class="mt-3">
+                                <form id="updateReadingProgressForm" class="row g-3 align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">Current Page</span>
+                                            <input type="number" class="form-control" id="currentPageInput" 
+                                                  min="0" max="{{ book.page_count }}" value="{{ book.current_page }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" id="updateProgressBtn" class="btn btn-primary">Update Progress</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -199,6 +262,49 @@ $(document).ready(function() {
             performSearch();
         }
     });
+    
+    // Update progress button functionality
+    $('#updateProgressBtn').data('book-id', {{ book.id }});
+    
+    // Toggle favorite button
+    $('.toggle-favorite').data('book-id', {{ book.id }});
+    
+    // Save book changes
+    $('#saveBookChanges').click(function() {
+        const form = $('#editBookForm');
+        const bookId = {{ book.id }};
+        
+        const bookData = {
+            title: form.find('[name="title"]').val(),
+            author: form.find('[name="author"]').val(),
+            category: form.find('[name="category"]').val(),
+            tags: form.find('[name="tags"]').val(),
+            description: form.find('[name="description"]').val(),
+            favorite: form.find('[name="favorite"]').is(':checked')
+        };
+        
+        $.ajax({
+            url: `/book/${bookId}/update/`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(bookData),
+            success: function(response) {
+                if (response.success) {
+                    // Hide modal
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                    modal.hide();
+                    
+                    // Show success toast
+                    $('#successToast').toast('show');
+                    
+                    // Reload page after a short delay
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                }
+            }
+        });
+    });
 });
 
 function loadChapterContent(chapterId) {
@@ -259,3 +365,60 @@ function performSearch() {
 }
 </script>
 {% endblock %}
+
+<!-- Edit Book Modal -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editBookModalLabel">Edit Book Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editBookForm">
+                    <div class="mb-3">
+                        <label for="bookTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="bookTitle" value="{{ book.title }}" name="title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="bookAuthor" class="form-label">Author</label>
+                        <input type="text" class="form-control" id="bookAuthor" value="{{ book.author }}" name="author">
+                    </div>
+                    <div class="mb-3">
+                        <label for="bookCategory" class="form-label">Category</label>
+                        <select class="form-select" id="bookCategory" name="category">
+                            <option value="fiction" {% if book.category == 'fiction' %}selected{% endif %}>Fiction</option>
+                            <option value="non-fiction" {% if book.category == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                            <option value="science" {% if book.category == 'science' %}selected{% endif %}>Science</option>
+                            <option value="technology" {% if book.category == 'technology' %}selected{% endif %}>Technology</option>
+                            <option value="business" {% if book.category == 'business' %}selected{% endif %}>Business</option>
+                            <option value="philosophy" {% if book.category == 'philosophy' %}selected{% endif %}>Philosophy</option>
+                            <option value="self-help" {% if book.category == 'self-help' %}selected{% endif %}>Self Help</option>
+                            <option value="history" {% if book.category == 'history' %}selected{% endif %}>History</option>
+                            <option value="biography" {% if book.category == 'biography' %}selected{% endif %}>Biography</option>
+                            <option value="other" {% if book.category == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bookTags" class="form-label">Tags (comma separated)</label>
+                        <input type="text" class="form-control" id="bookTags" value="{{ book.tags }}" name="tags">
+                    </div>
+                    <div class="mb-3">
+                        <label for="bookDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="bookDescription" name="description" rows="3">{{ book.description }}</textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="bookFavorite" name="favorite" {% if book.favorite %}checked{% endif %}>
+                        <label class="form-check-label" for="bookFavorite">
+                            Mark as Favorite
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveBookChanges">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>

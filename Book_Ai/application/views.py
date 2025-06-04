@@ -5,10 +5,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
+from django.utils import timezone
+from django.db.models import Count, Sum, Avg
 import json
 import os
 import uuid
-from .models import Book, Chapter, ChatSession, ChatMessage
+import datetime
+from .models import Book, Chapter, ChatSession, ChatMessage, ReadingActivity
 
 # Import the PDF processing functionality
 try:
@@ -20,10 +23,37 @@ except ImportError:
 def home(request):
     """Main dashboard view"""
     books = Book.objects.all().order_by('-uploaded_at')
+    
+    # Get book statistics
+    total_books = books.count()
+    total_pages = books.aggregate(Sum('page_count'))['page_count__sum'] or 0
+    
+    # Get reading activities for the past 30 days
+    thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
+    recent_activities = ReadingActivity.objects.filter(start_time__gte=thirty_days_ago).order_by('-start_time')[:5]
+    
+    # Get book categories distribution
+    categories = Book.objects.values('category').annotate(count=Count('id')).order_by('-count')
+    
+    # Get favorite books
+    favorite_books = Book.objects.filter(favorite=True).order_by('-uploaded_at')[:3]
+    
+    # Get in-progress books (books with reading progress > 0 but < 100%)
+    in_progress_books = [
+        book for book in books 
+        if book.current_page > 0 and book.current_page < book.page_count
+    ][:5]
+    
     context = {
         'books': books,
         'pdf_processing_available': PDF_PROCESSING_AVAILABLE,
-        'supported_models': SUPPORTED_MODELS if PDF_PROCESSING_AVAILABLE else []
+        'supported_models': SUPPORTED_MODELS if PDF_PROCESSING_AVAILABLE else [],
+        'total_books': total_books,
+        'total_pages': total_pages,
+        'recent_activities': recent_activities,
+        'categories': categories,
+        'favorite_books': favorite_books,
+        'in_progress_books': in_progress_books
     }
     return render(request, 'application/home.html', context)
 
@@ -319,3 +349,129 @@ def export_structure(request, book_id):
         ])
     
     return response
+
+@csrf_exempt
+def update_reading_progress(request, book_id):
+    """Update book reading progress"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    book = get_object_or_404(Book, id=book_id)
+    
+    try:
+        data = json.loads(request.body)
+        current_page = int(data.get('current_page', 0))
+        
+        if current_page < 0 or current_page > book.page_count:
+            return JsonResponse({'error': 'Invalid page number'}, status=400)
+        
+        # Create or update reading activity
+        if current_page > book.current_page:
+            activity = ReadingActivity.objects.filter(
+                book=book,
+                end_time__isnull=True
+            ).first()
+            
+            if not activity:
+                # Create a new reading session
+                activity = ReadingActivity.objects.create(
+                    book=book,
+                    user=request.user if request.user.is_authenticated else None,
+                    start_page=book.current_page
+                )
+            else:
+                # Update existing reading session
+                activity.end_page = current_page
+                activity.end_time = timezone.now()
+                activity.duration = activity.end_time - activity.start_time
+                activity.save()
+        
+        # Update book progress
+        book.current_page = current_page
+        book.last_read_at = timezone.now()
+        book.save()
+        
+        return JsonResponse({
+            'success': True,
+            'progress_percentage': book.reading_progress_percentage()
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def update_book_info(request, book_id):
+    """Update book information"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    book = get_object_or_404(Book, id=book_id)
+    
+    try:
+        data = json.loads(request.body)
+        
+        if 'title' in data:
+            book.title = data['title']
+        if 'author' in data:
+            book.author = data['author']
+        if 'category' in data:
+            book.category = data['category']
+        if 'tags' in data:
+            book.tags = data['tags']
+        if 'description' in data:
+            book.description = data['description']
+        if 'favorite' in data:
+            book.favorite = data['favorite']
+            
+        book.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Book information updated successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def book_recommendation(request):
+    """Book recommendation based on reading history"""
+    # Simple recommendation based on category
+    if request.user.is_authenticated:
+        user_books = Book.objects.filter(uploaded_by=request.user)
+        
+        if user_books.exists():
+            # Get most read categories
+            user_categories = user_books.values('category').annotate(count=Count('id')).order_by('-count')
+            if user_categories:
+                top_category = user_categories[0]['category']
+                
+                # Recommend books from the same category that the user hasn't uploaded
+                recommended_books = Book.objects.filter(category=top_category).exclude(
+                    uploaded_by=request.user
+                )[:3]
+                
+                return JsonResponse({
+                    'recommendations': [
+                        {
+                            'id': book.id,
+                            'title': book.title,
+                            'author': book.author,
+                            'category': book.category
+                        }
+                        for book in recommended_books
+                    ]
+                })
+    
+    # Default recommendations based on popularity
+    popular_books = Book.objects.all().order_by('-uploaded_at')[:3]
+    return JsonResponse({
+        'recommendations': [
+            {
+                'id': book.id,
+                'title': book.title,
+                'author': book.author,
+                'category': book.category
+            }
+            for book in popular_books
+        ]
+    })

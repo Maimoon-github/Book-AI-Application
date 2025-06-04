@@ -11,26 +11,36 @@
         </div>
     </div>
 
+    <!-- Stats Cards -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
                     <i class="fas fa-book fa-3x text-primary mb-3"></i>
-                    <h5>{{ books.count }}</h5>
+                    <h5>{{ total_books }}</h5>
                     <p>Total Books</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="fas fa-list fa-3x text-success mb-3"></i>
+                    <i class="fas fa-file-alt fa-3x text-success mb-3"></i>
+                    <h5>{{ total_pages }}</h5>
+                    <p>Total Pages</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-list fa-3x text-warning mb-3"></i>
                     <h5>{{ books|length }}</h5>
                     <p>Processed Books</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
                     <i class="fas fa-robot fa-3x text-info mb-3"></i>
@@ -40,11 +50,144 @@
             </div>
         </div>
     </div>
+    
+    <!-- Reading Progress & Recommendations -->
+    <div class="row mb-4">
+        <!-- Books in Progress -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bookmark"></i> Currently Reading</h5>
+                </div>
+                <div class="card-body">
+                    {% if in_progress_books %}
+                        {% for book in in_progress_books %}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-book fa-2x text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">{{ book.title }}</h6>
+                                    <div class="progress mt-2" style="height: 10px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" 
+                                             style="width: {{ book.reading_progress_percentage }}%" 
+                                             aria-valuenow="{{ book.reading_progress_percentage }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ book.reading_progress_percentage }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Page {{ book.current_page }} of {{ book.page_count }}</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No books currently in progress.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Favorite Books -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-heart"></i> Favorite Books</h5>
+                </div>
+                <div class="card-body">
+                    {% if favorite_books %}
+                        <div class="list-group">
+                            {% for book in favorite_books %}
+                                <a href="{% url 'book_detail' book.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ book.title }}</h6>
+                                        <small>{{ book.uploaded_at|date:"M d, Y" }}</small>
+                                    </div>
+                                    {% if book.author %}
+                                        <small class="text-muted"><i class="fas fa-user"></i> {{ book.author }}</small>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No favorite books yet. Mark your favorites!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>    <!-- Categories and Recent Activity -->
+    <div class="row mb-4">
+        <!-- Categories -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Library by Category</h5>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                        <div class="row">
+                            {% for category in categories %}
+                                <div class="col-6 mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>{{ category.category|title }}</span>
+                                        <span class="badge bg-primary rounded-pill">{{ category.count }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-success" 
+                                             role="progressbar" 
+                                             style="width: {{ category.count|floatformat:0 }}%" 
+                                             aria-valuenow="{{ category.count }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No books categorized yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activities %}
+                        <div class="timeline">
+                            {% for activity in recent_activities %}
+                                <div class="d-flex mb-3">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-circle text-info" style="font-size: 0.5rem; margin-top: 0.5rem; margin-right: 0.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <p class="mb-0"><strong>{{ activity.book.title }}</strong></p>
+                                        <p class="text-muted small mb-0">
+                                            Read from page {{ activity.start_page }} 
+                                            {% if activity.end_page %}to page {{ activity.end_page }}{% endif %}
+                                        </p>
+                                        <p class="text-muted small mb-0">{{ activity.start_time|date:"M d, Y H:i" }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No recent reading activity.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>Your Books</h3>
+                <h3>Your Library</h3>
                 <a href="{% url 'upload_book' %}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Upload New Book
                 </a>
@@ -52,21 +195,34 @@
 
             {% if books %}
                 <div class="row">
-                    {% for book in books %}
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">
+                    {% for book in books %}                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
                                         <i class="fas fa-book"></i> {{ book.title }}
                                     </h5>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-link text-danger toggle-favorite" data-book-id="{{ book.id }}" data-favorite="{{ book.favorite|yesno:'true,false' }}">
+                                            <i class="fas fa-heart{% if not book.favorite %}-broken{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
                                     <p class="card-text">
+                                        {% if book.author %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> {{ book.author }}<br>
+                                            </small>
+                                        {% endif %}
                                         <small class="text-muted">
                                             <i class="fas fa-file-pdf"></i> {{ book.filename }}<br>
                                             <i class="fas fa-calendar"></i> {{ book.uploaded_at|date:"M d, Y" }}<br>
-                                            <i class="fas fa-file-alt"></i> {{ book.page_count }} pages
+                                            <i class="fas fa-file-alt"></i> {{ book.page_count }} pages<br>
+                                            <i class="fas fa-tag"></i> {{ book.get_category_display|default:"Uncategorized" }}
                                         </small>
                                     </p>
                                     
+                                    <!-- Processing Status -->
                                     <div class="mb-2">
                                         {% if book.processing_status == 'completed' %}
                                             <span class="badge bg-success">
@@ -85,7 +241,32 @@
                                                 <i class="fas fa-clock"></i> Pending
                                             </span>
                                         {% endif %}
+                                        
+                                        <!-- Book Tags -->
+                                        {% if book.tags %}
+                                            {% for tag in book.tag_list %}
+                                                <span class="badge bg-info ms-1">{{ tag }}</span>
+                                            {% endfor %}
+                                        {% endif %}
                                     </div>
+                                    
+                                    <!-- Reading Progress -->
+                                    {% if book.current_page > 0 %}
+                                        <div class="progress mb-3" style="height: 8px;">
+                                            <div class="progress-bar" 
+                                                 role="progressbar" 
+                                                 style="width: {{ book.reading_progress_percentage }}%" 
+                                                 aria-valuenow="{{ book.reading_progress_percentage }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100"></div>
+                                        </div>
+                                        <p class="card-text text-muted small mb-3">
+                                            Reading: page {{ book.current_page }} of {{ book.page_count }} ({{ book.reading_progress_percentage }}%)
+                                            {% if book.last_read_at %}
+                                                <br>Last read: {{ book.last_read_at|date:"M d, Y" }}
+                                            {% endif %}
+                                        </p>
+                                    {% endif %}
 
                                     <div class="btn-group w-100" role="group">
                                         <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-primary btn-sm">
@@ -96,6 +277,67 @@
                                                 <i class="fas fa-comments"></i> Chat
                                             </a>
                                         {% endif %}
+                                        <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#editBookModal{{ book.id }}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Edit Book Modal -->
+                            <div class="modal fade" id="editBookModal{{ book.id }}" tabindex="-1" aria-labelledby="editBookModalLabel{{ book.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="editBookModalLabel{{ book.id }}">Edit Book Details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="editBookForm{{ book.id }}" class="edit-book-form" data-book-id="{{ book.id }}">
+                                                <div class="mb-3">
+                                                    <label for="bookTitle{{ book.id }}" class="form-label">Title</label>
+                                                    <input type="text" class="form-control" id="bookTitle{{ book.id }}" value="{{ book.title }}" name="title">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="bookAuthor{{ book.id }}" class="form-label">Author</label>
+                                                    <input type="text" class="form-control" id="bookAuthor{{ book.id }}" value="{{ book.author }}" name="author">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="bookCategory{{ book.id }}" class="form-label">Category</label>
+                                                    <select class="form-select" id="bookCategory{{ book.id }}" name="category">
+                                                        {% for choice in book.CATEGORY_CHOICES %}
+                                                            <option value="{{ choice.0 }}" {% if book.category == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="bookTags{{ book.id }}" class="form-label">Tags (comma separated)</label>
+                                                    <input type="text" class="form-control" id="bookTags{{ book.id }}" value="{{ book.tags }}" name="tags">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="bookDescription{{ book.id }}" class="form-label">Description</label>
+                                                    <textarea class="form-control" id="bookDescription{{ book.id }}" name="description" rows="3">{{ book.description }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="bookReadingProgress{{ book.id }}" class="form-label">Reading Progress (Page {{ book.current_page }} of {{ book.page_count }})</label>
+                                                    <input type="range" class="form-range" min="0" max="{{ book.page_count }}" id="bookReadingProgress{{ book.id }}" value="{{ book.current_page }}" name="current_page">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>0</span>
+                                                        <span id="currentPageDisplay{{ book.id }}">{{ book.current_page }}</span>
+                                                        <span>{{ book.page_count }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="bookFavorite{{ book.id }}" name="favorite" {% if book.favorite %}checked{% endif %}>
+                                                    <label class="form-check-label" for="bookFavorite{{ book.id }}">
+                                                        Mark as Favorite
+                                                    </label>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary save-book-changes" data-book-id="{{ book.id }}">Save changes</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -114,5 +356,146 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- Book Recommendations Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Recommended Books</h5>
+                </div>
+                <div class="card-body">
+                    <div id="book-recommendations" class="row">
+                        <div class="col-12 text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading recommendations...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Book recommendations
+        $.ajax({
+            url: '{% url "book_recommendation" %}',
+            method: 'GET',
+            success: function(data) {
+                var recommendationsHtml = '';
+                if (data.recommendations && data.recommendations.length > 0) {
+                    for (var i = 0; i < data.recommendations.length; i++) {
+                        var book = data.recommendations[i];
+                        recommendationsHtml += `
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${book.title}</h5>
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> ${book.author || 'Unknown author'}<br>
+                                                <i class="fas fa-tag"></i> ${book.category || 'Uncategorized'}
+                                            </small>
+                                        </p>
+                                        <a href="/book/${book.id}/" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i> View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    recommendationsHtml = '<div class="col-12 text-center"><p>No recommendations available at this time.</p></div>';
+                }
+                $('#book-recommendations').html(recommendationsHtml);
+            },
+            error: function() {
+                $('#book-recommendations').html('<div class="col-12 text-center"><p>Failed to load recommendations.</p></div>');
+            }
+        });
+        
+        // Toggle favorite status
+        $('.toggle-favorite').on('click', function() {
+            var btn = $(this);
+            var bookId = btn.data('book-id');
+            var currentFavorite = btn.data('favorite');
+            
+            $.ajax({
+                url: `/book/${bookId}/update/`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    favorite: !currentFavorite
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        btn.data('favorite', !currentFavorite);
+                        if (!currentFavorite) {
+                            btn.find('i').removeClass('fa-heart-broken').addClass('fa-heart');
+                        } else {
+                            btn.find('i').removeClass('fa-heart').addClass('fa-heart-broken');
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Reading progress sliders
+        $('input[type="range"][name="current_page"]').on('input', function() {
+            var bookId = $(this).closest('form').data('book-id');
+            $('#currentPageDisplay' + bookId).text($(this).val());
+        });
+        
+        // Save book changes
+        $('.save-book-changes').on('click', function() {
+            var bookId = $(this).data('book-id');
+            var form = $('#editBookForm' + bookId);
+            
+            var bookData = {
+                title: form.find('[name="title"]').val(),
+                author: form.find('[name="author"]').val(),
+                category: form.find('[name="category"]').val(),
+                tags: form.find('[name="tags"]').val(),
+                description: form.find('[name="description"]').val(),
+                current_page: parseInt(form.find('[name="current_page"]').val()),
+                favorite: form.find('[name="favorite"]').is(':checked')
+            };
+            
+            $.ajax({
+                url: `/book/${bookId}/update/`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(bookData),
+                success: function(response) {
+                    if (response.success) {
+                        $('#editBookModal' + bookId).modal('hide');
+                        location.reload(); // Refresh to show updates
+                    }
+                }
+            });
+        });
+        
+        // Update reading progress
+        $('input[type="range"][name="current_page"]').on('change', function() {
+            var bookId = $(this).closest('form').data('book-id');
+            var currentPage = parseInt($(this).val());
+            
+            $.ajax({
+                url: `/book/${bookId}/progress/`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    current_page: currentPage
+                })
+            });
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}
