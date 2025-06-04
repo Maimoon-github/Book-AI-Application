@@ -158,11 +158,10 @@ class BookTeachingRAG:
                         'end_page': chunk['end_page'],
                         'level': chunk['level']
                     })
-            else:
-                rag_chunks.append(chunk)
+            else:                rag_chunks.append(chunk)
         
         return rag_chunks
-
+        
     def retrieve_context(self, query, chapter_filter=None):
         """Retrieve relevant context for a query"""
         if not self.collection:
@@ -187,7 +186,8 @@ class BookTeachingRAG:
                     'content': doc,
                     'title': metadata['title'],
                     'start_page': metadata['start_page'],
-                    'end_page': metadata['end_page']
+                    'end_page': metadata['end_page'],
+                    'level': metadata['level']
                 })
             
             return context
@@ -195,7 +195,7 @@ class BookTeachingRAG:
         except Exception as e:
             logger.error(f"Error retrieving context: {e}")
             return []
-
+            
     def teach_topic(self, user_question, messages_history, selected_chapter=None, thread_id="default"):
         """Generate teaching response using RAG"""
         try:
@@ -204,10 +204,19 @@ class BookTeachingRAG:
             
             # Build context string
             context_str = ""
+            sources_info = []
             if context:
                 context_str = "\n\nRelevant book content:\n"
-                for ctx in context:
-                    context_str += f"\n[{ctx['title']} - Pages {ctx['start_page']+1}-{ctx['end_page']+1}]\n{ctx['content']}\n"
+                for i, ctx in enumerate(context):
+                    source_id = f"[Source {i+1}]"
+                    context_str += f"\n{source_id} {ctx['title']} - Pages {ctx['start_page']+1}-{ctx['end_page']+1}\n{ctx['content']}\n"
+                    sources_info.append({
+                        'source_id': source_id,
+                        'title': ctx['title'],
+                        'start_page': ctx['start_page'],
+                        'end_page': ctx['end_page'],
+                        'content': ctx['content']
+                    })
             
             # Create system prompt
             system_prompt = f"""You are an AI teacher helping students understand a book. 
@@ -217,7 +226,8 @@ class BookTeachingRAG:
             - Base your answers on the provided book content
             - Explain concepts clearly and provide examples when helpful
             - If the question cannot be answered from the book content, say so
-            - Always cite which chapter/section your answer comes from
+            - Cite your sources using the [Source X] format when explaining concepts
+            - Always refer to specific chapters/sections in your answers
             - Be encouraging and supportive in your teaching style
             
             {context_str}
@@ -240,11 +250,18 @@ class BookTeachingRAG:
             config = {"configurable": {"thread_id": thread_id}}
             result = self.app.invoke({"messages": messages}, config)
             
-            return result["messages"][-1].content
+            # Return both the response text and the referenced context
+            return {
+                "response": result["messages"][-1].content,
+                "referenced_context": context
+            }
             
         except Exception as e:
             logger.error(f"Error generating teaching response: {e}")
-            return f"I apologize, but I encountered an error while processing your question: {str(e)}"
+            return {
+                "response": f"I apologize, but I encountered an error while processing your question: {str(e)}",
+                "referenced_context": []
+            }
 
 
 class PDFProcessor:
