@@ -1,5 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
+import logging
+import logging
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
@@ -362,8 +364,26 @@ def send_message(request, book_id):
             'referenced_chapters': referenced_chapters
         })
         
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        # Always return a generic fallback response without exposing errors
+        fallback = "Sorry, the AI is having trouble answering right now. Please try again later."
+        # Optionally log for debugging (no crash)
+        logging.getLogger(__name__).exception('send_message fallback')
+        # Save fallback AI message in chat history
+        try:
+            ChatMessage.objects.create(
+                session=chat_session,
+                message_type='ai',
+                content=fallback
+            )
+        except:
+            pass
+        # Return JSON 200 with fallback
+        return JsonResponse({
+            'response': fallback,
+            'message_id': None,
+            'referenced_chapters': []
+        })
 
 def export_structure(request, book_id):
     """Export book structure as CSV"""

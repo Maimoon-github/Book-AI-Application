@@ -198,70 +198,37 @@ class BookTeachingRAG:
             
     def teach_topic(self, user_question, messages_history, selected_chapter=None, thread_id="default"):
         """Generate teaching response using RAG"""
+        # Retrieve context chunks relevant to the question
+        context = self.retrieve_context(user_question, selected_chapter)
+        # Prepare messages: system prompt, context entries, history, then question
+        system_prompt = "You are an AI teacher helping students understand a book. Use the provided context to answer pedagogically."
+        # Start with system message
+        state_messages = [HumanMessage(content=system_prompt)]
+        # Add context entries
+        for i, ctx in enumerate(context):
+            entry = f"[Source {i+1}] {ctx['title']} (Pages {ctx['start_page']+1}-{ctx['end_page']+1})\n{ctx['content']}"
+            state_messages.append(HumanMessage(content=entry))
+        # Add recent conversation history
+        for entry in messages_history[-5:]:
+            role = entry.get("role")
+            text = entry.get("content", "")
+            if role == "user":
+                state_messages.append(HumanMessage(content=text))
+            else:
+                state_messages.append(AIMessage(content=text))
+        # Add the current question
+        state_messages.append(HumanMessage(content=user_question))
+        # Invoke the LangGraph workflow to generate response
         try:
-            # Retrieve relevant context
-            context = self.retrieve_context(user_question, selected_chapter)
-            
-            # Build context string
-            context_str = ""
-            sources_info = []
-            if context:
-                context_str = "\n\nRelevant book content:\n"
-                for i, ctx in enumerate(context):
-                    source_id = f"[Source {i+1}]"
-                    context_str += f"\n{source_id} {ctx['title']} - Pages {ctx['start_page']+1}-{ctx['end_page']+1}\n{ctx['content']}\n"
-                    sources_info.append({
-                        'source_id': source_id,
-                        'title': ctx['title'],
-                        'start_page': ctx['start_page'],
-                        'end_page': ctx['end_page'],
-                        'content': ctx['content']
-                    })
-            
-            # Create system prompt
-            system_prompt = f"""You are an AI teacher helping students understand a book. 
-            Use the provided book content to answer questions accurately and pedagogically.
-            
-            Guidelines:
-            - Base your answers on the provided book content
-            - Explain concepts clearly and provide examples when helpful
-            - If the question cannot be answered from the book content, say so
-            - Cite your sources using the [Source X] format when explaining concepts
-            - Always refer to specific chapters/sections in your answers
-            - Be encouraging and supportive in your teaching style
-            
-            {context_str}
-            """
-            
-            # Prepare messages
-            messages = [HumanMessage(content=system_prompt)]
-            
-            # Add conversation history
-            for msg in messages_history[-5:]:  # Last 5 messages for context
-                if msg["role"] == "user":
-                    messages.append(HumanMessage(content=msg["content"]))
-                else:
-                    messages.append(AIMessage(content=msg["content"]))
-            
-            # Add current question
-            messages.append(HumanMessage(content=user_question))
-            
-            # Generate response using LangGraph
+            state = {"messages": state_messages}
             config = {"configurable": {"thread_id": thread_id}}
-            result = self.app.invoke({"messages": messages}, config)
-            
-            # Return both the response text and the referenced context
-            return {
-                "response": result["messages"][-1].content,
-                "referenced_context": context
-            }
-            
+            output = self.app.invoke(state, config)
+            ai_msg = output["messages"][-1]
+            response_text = ai_msg.content if hasattr(ai_msg, "content") else str(ai_msg)
         except Exception as e:
             logger.error(f"Error generating teaching response: {e}")
-            return {
-                "response": f"I apologize, but I encountered an error while processing your question: {str(e)}",
-                "referenced_context": []
-            }
+            response_text = "Sorry, I couldn't process your request at the moment."
+        return {"response": response_text, "referenced_context": context}
 
 
 class PDFProcessor:
