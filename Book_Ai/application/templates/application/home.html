@@ -1,0 +1,118 @@
+{% extends 'application/base.html' %}
+
+{% block title %}Dashboard - Book AI Application{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <p class="lead">Welcome to your Book AI Application. Upload and analyze your PDF books with AI-powered insights.</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-book fa-3x text-primary mb-3"></i>
+                    <h5>{{ books.count }}</h5>
+                    <p>Total Books</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-list fa-3x text-success mb-3"></i>
+                    <h5>{{ books|length }}</h5>
+                    <p>Processed Books</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-robot fa-3x text-info mb-3"></i>
+                    <h5>{% if pdf_processing_available %}Available{% else %}Unavailable{% endif %}</h5>
+                    <p>AI Features</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Your Books</h3>
+                <a href="{% url 'upload_book' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Upload New Book
+                </a>
+            </div>
+
+            {% if books %}
+                <div class="row">
+                    {% for book in books %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-book"></i> {{ book.title }}
+                                    </h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-file-pdf"></i> {{ book.filename }}<br>
+                                            <i class="fas fa-calendar"></i> {{ book.uploaded_at|date:"M d, Y" }}<br>
+                                            <i class="fas fa-file-alt"></i> {{ book.page_count }} pages
+                                        </small>
+                                    </p>
+                                    
+                                    <div class="mb-2">
+                                        {% if book.processing_status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Processed
+                                            </span>
+                                        {% elif book.processing_status == 'processing' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-spinner fa-spin"></i> Processing
+                                            </span>
+                                        {% elif book.processing_status == 'failed' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-exclamation-triangle"></i> Failed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-clock"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if book.processing_status == 'completed' and pdf_processing_available %}
+                                            <a href="{% url 'chat_interface' book.id %}" class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-comments"></i> Chat
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-book fa-4x text-muted mb-3"></i>
+                    <h4>No books uploaded yet</h4>
+                    <p class="text-muted">Upload your first PDF book to get started with AI-powered analysis.</p>
+                    <a href="{% url 'upload_book' %}" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload Your First Book
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
