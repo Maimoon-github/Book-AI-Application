@@ -2,9 +2,283 @@ import streamlit as st
 import os
 import re
 import tempfile
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Sequence
 import pandas as pd
 import fitz  # PyMuPDF
+
+# RAG and AI imports
+import chromadb
+from sentence_transformers import SentenceTransformer
+from typing_extensions import Annotated, TypedDict
+
+try:
+    from langchain_groq import ChatGroq
+    from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langgraph.graph import START, StateGraph
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.graph.message import add_messages
+    RAG_AVAILABLE = True
+except ImportError:
+    RAG_AVAILABLE = False
+    st.warning("RAG features require additional packages. Install with: pip install langchain-groq langgraph sentence-transformers chromadb")
+
+# Supported Groq models for book teaching
+SUPPORTED_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant", 
+    "gemma2-9b-it",
+    "mixtral-8x7b-32768"
+]
+
+class BookTeachingRAG:
+    def __init__(self):
+        self.chroma_client = chromadb.Client()
+        self.collection = None
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.groq_model = None
+        self.app = None
+        
+    def setup_groq_model(self, api_key, model_name="llama-3.3-70b-versatile"):
+        """Initialize Groq model for teaching responses"""
+        self.groq_model = ChatGroq(
+            model=model_name,
+            api_key=api_key,
+            temperature=0.7
+        )
+        self._initialize_workflow()
+    
+    def _initialize_workflow(self):
+        """Set up LangGraph workflow for teaching conversations"""
+        teaching_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are an expert AI teacher specializing in adaptive learning from books. Your teaching follows a structured pedagogical approach.
+
+## Teaching Philosophy & Pattern:
+
+### 🎯 **Learning Objective Identification**
+- First understand what the student wants to learn
+- Identify their current knowledge level
+- Set clear, achievable learning goals
+
+### 📚 **Structured Teaching Pattern**
+When teaching any concept, follow this pattern:
+
+1. **FOUNDATION** 🏗️
+   - Start with core definitions and basic concepts
+   - Provide clear, simple explanations
+   - Use analogies from everyday life
+
+2. **CONTEXT** 🌍
+   - Explain where this fits in the bigger picture
+   - Connect to previously learned material
+   - Show relevance and importance
+
+3. **EXAMPLES** 💡
+   - Provide concrete, relatable examples
+   - Use case studies from the book content
+   - Show practical applications
+
+4. **ANALYSIS** 🔍
+   - Break down complex ideas into components
+   - Explain cause-and-effect relationships
+   - Highlight patterns and principles
+
+5. **APPLICATION** 🚀
+   - Suggest how to apply this knowledge
+   - Provide practice scenarios
+   - Connect to real-world situations
+
+6. **REINFORCEMENT** 🎯
+   - Summarize key takeaways
+   - Suggest follow-up questions for deeper learning
+   - Recommend related topics to explore
+
+### 💬 **Communication Style**
+- **Clarity**: Use simple, clear language
+- **Engagement**: Ask thought-provoking questions
+- **Encouragement**: Maintain positive, supportive tone
+- **Adaptation**: Adjust complexity based on student responses
+- **Source-Grounded**: Always reference the book content
+
+### 🔄 **Interactive Learning**
+- Ask "Do you understand?" or "What would you like to explore further?"
+- Encourage questions and clarification requests
+- Provide multiple perspectives on complex topics
+- Use Socratic method when appropriate
+
+### 📖 **Content Integration**
+- Always ground explanations in the provided book context
+- Reference specific chapters and page numbers
+- Quote relevant passages when helpful
+- Maintain fidelity to the author's intent
+
+### 🎓 **Assessment & Progress**
+- Check understanding with gentle questioning
+- Provide positive reinforcement for engagement
+- Suggest next steps in the learning journey
+- Identify knowledge gaps and address them
+
+Remember: You are not just answering questions - you are facilitating deep, meaningful learning experiences based on the book's content."""),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+        
+        class TeachingState(TypedDict):
+            messages: Annotated[Sequence[BaseMessage], add_messages]
+            context: str
+            sources: list
+        
+        workflow = StateGraph(state_schema=TeachingState)
+        
+        def call_teaching_model(state: TeachingState):
+            # Include context in the conversation
+            context_message = f"\n--- BOOK CONTEXT ---\n{state.get('context', '')}\n--- END CONTEXT ---\n"
+            
+            # Prepare messages with context
+            messages_with_context = list(state["messages"])
+            if messages_with_context and isinstance(messages_with_context[-1], HumanMessage):
+                # Add context to the last human message
+                last_msg = messages_with_context[-1]
+                enhanced_content = f"{context_message}\nSTUDENT QUESTION: {last_msg.content}"
+                messages_with_context[-1] = HumanMessage(content=enhanced_content)
+            
+            prompt = teaching_prompt.invoke({"messages": messages_with_context})
+            response = self.groq_model.invoke(prompt)
+            return {"messages": [response]}
+        
+        workflow.add_node("teaching_model", call_teaching_model)
+        workflow.add_edge(START, "teaching_model")
+        
+        memory = MemorySaver()
+        self.app = workflow.compile(checkpointer=memory)
+    
+    def index_book_content(self, book_chunks):
+        """Store book chunks in vector database"""
+        try:
+            self.collection = self.chroma_client.create_collection(
+                name="book_content", 
+                get_or_create=True
+            )
+        except:
+            self.collection = self.chroma_client.get_collection(name="book_content")
+        
+        rag_chunks = self.create_rag_chunks(book_chunks)
+        
+        documents = []
+        embeddings = []
+        metadatas = []
+        ids = []
+        
+        for i, chunk in enumerate(rag_chunks):
+            embedding = self.embedding_model.encode(chunk['text'])
+            
+            documents.append(chunk['text'])
+            embeddings.append(embedding.tolist())
+            metadatas.append(chunk['metadata'])
+            ids.append(f"chunk_{i}")
+        
+        self.collection.add(
+            documents=documents,
+            embeddings=embeddings,
+            metadatas=metadatas,
+            ids=ids
+        )
+    
+    def create_rag_chunks(self, book_chunks):
+        """Split large chapters into smaller, contextual chunks"""
+        rag_chunks = []
+        
+        for chapter in book_chunks:
+            chapter_text = chapter['content']
+            sentences = chapter_text.split('. ')
+            
+            current_chunk = ""
+            word_count = 0
+            
+            for sentence in sentences:
+                sentence_words = len(sentence.split())
+                
+                if word_count + sentence_words > 400:
+                    if current_chunk.strip():
+                        rag_chunks.append({
+                            'text': current_chunk.strip(),
+                            'metadata': {
+                                'chapter': chapter['title'],
+                                'start_page': chapter['start_page'],
+                                'end_page': chapter['end_page'],
+                                'chunk_type': 'content'
+                            }
+                        })
+                    current_chunk = sentence + '. '
+                    word_count = sentence_words
+                else:
+                    current_chunk += sentence + '. '
+                    word_count += sentence_words
+            
+            if current_chunk.strip():
+                rag_chunks.append({
+                    'text': current_chunk.strip(),
+                    'metadata': {
+                        'chapter': chapter['title'],
+                        'start_page': chapter['start_page'],
+                        'end_page': chapter['end_page'],
+                        'chunk_type': 'content'
+                    }
+                })
+        
+        return rag_chunks
+    
+    def retrieve_context(self, query, chapter_filter=None):
+        """Retrieve most relevant chunks for the query"""
+        if not self.collection:
+            return {"documents": [[]], "metadatas": [[]]}
+            
+        query_embedding = self.embedding_model.encode(query)
+        
+        where_clause = None
+        if chapter_filter:
+            where_clause = {"chapter": {"$eq": chapter_filter}}
+        
+        results = self.collection.query(
+            query_embeddings=[query_embedding.tolist()],
+            n_results=3,
+            where=where_clause
+        )
+        
+        return results
+    
+    def teach_topic(self, user_question, messages_history, selected_chapter=None, thread_id="default"):
+        """Main teaching function using RAG and LangGraph"""
+        # Retrieve relevant context
+        context_data = self.retrieve_context(user_question, selected_chapter)
+        
+        # Prepare context text
+        context_text = ""
+        source_info = []
+        
+        for i, doc in enumerate(context_data['documents'][0]):
+            if i < len(context_data['metadatas'][0]):
+                metadata = context_data['metadatas'][0][i]
+                context_text += f"\n--- Context {i+1} ---\n{doc}\n"
+                source_info.append(f"Chapter: {metadata['chapter']}, Pages: {metadata['start_page']}-{metadata['end_page']}")
+        
+        # Prepare state for LangGraph
+        state = {
+            "messages": messages_history + [HumanMessage(content=user_question)],
+            "context": context_text,
+            "sources": source_info
+        }
+        
+        config = {"configurable": {"thread_id": thread_id}}
+        
+        # Generate response using LangGraph
+        output = self.app.invoke(state, config)
+        ai_response = output["messages"][-1]
+        
+        return {
+            "response": ai_response,
+            "sources": source_info,
+            "context_used": len(context_data['documents'][0])
+        }
 
 class PDFProcessor:
     def __init__(self, file_path):
@@ -276,15 +550,168 @@ def export_chunks_to_csv(chunks, filename):
     # Create a downloadable CSV
     return export_df.to_csv(index=False).encode('utf-8')
 
+def create_teaching_interface(result, api_key):
+    """Create interactive teaching interface with LangGraph"""
+    st.subheader("🤖 AI Teacher - Ask Questions About Your Book")
+    
+    if not RAG_AVAILABLE:
+        st.error("RAG features are not available. Please install required packages.")
+        st.code("pip install langchain-groq langgraph sentence-transformers chromadb")
+        return
+    
+    # Initialize RAG system
+    if 'rag_system' not in st.session_state:
+        with st.spinner("Setting up AI teacher..."):
+            try:
+                st.session_state.rag_system = BookTeachingRAG()
+                st.session_state.rag_system.index_book_content(result['chunks'])
+                st.success("AI Teacher initialized! 🎓")
+            except Exception as e:
+                st.error(f"Failed to initialize AI teacher: {str(e)}")
+                return
+    
+    # Model configuration
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_model = st.selectbox(
+            "Choose AI Model:", 
+            SUPPORTED_MODELS,
+            index=0
+        )
+    
+    with col2:
+        chapter_titles = [chunk['title'] for chunk in result['chunks']]
+        selected_chapter = st.selectbox(
+            "Focus on chapter (optional):",
+            ["All Chapters"] + chapter_titles
+        )
+    
+    # Setup Groq model if not already done
+    if not st.session_state.rag_system.groq_model:
+        if api_key:
+            try:
+                st.session_state.rag_system.setup_groq_model(api_key, selected_model)
+                st.success("AI Teacher ready! 🎓")
+            except Exception as e:
+                st.error(f"Failed to setup AI model: {str(e)}")
+                st.info("Please check your Groq API key and try again.")
+                return
+        else:
+            st.warning("Please enter your Groq API key in the sidebar to start teaching!")
+            st.info("Get your free API key from: https://console.groq.com/")
+            return
+    
+    # Initialize chat state
+    if 'teaching_messages' not in st.session_state:
+        st.session_state.teaching_messages = []
+    
+    if 'thread_id' not in st.session_state:
+        st.session_state.thread_id = "book_teaching_session"
+    
+    # Clear chat button
+    if st.button("🗑️ Clear Chat History"):
+        st.session_state.teaching_messages = []
+        st.rerun()
+    
+    # Display chat history
+    for message in st.session_state.teaching_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+            if "sources" in message and message["sources"]:
+                with st.expander("📚 Sources"):
+                    for source in message["sources"]:
+                        st.write(f"• {source}")
+    
+    # Chat input
+    if prompt := st.chat_input("Ask me anything about this book..."):
+        # Add user message
+        st.session_state.teaching_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Generate AI response
+        with st.chat_message("assistant"):
+            with st.spinner("Teaching..."):
+                chapter_filter = selected_chapter if selected_chapter != "All Chapters" else None
+                
+                # Convert messages to LangChain format
+                lc_messages = []
+                for msg in st.session_state.teaching_messages[:-1]:  # Exclude the current user message
+                    if msg["role"] == "user":
+                        lc_messages.append(HumanMessage(content=msg["content"]))
+                    else:
+                        lc_messages.append(AIMessage(content=msg["content"]))
+                
+                try:
+                    response = st.session_state.rag_system.teach_topic(
+                        prompt, 
+                        lc_messages, 
+                        chapter_filter,
+                        st.session_state.thread_id
+                    )
+                    
+                    ai_content = response["response"].content
+                    st.markdown(ai_content)
+                    
+                    # Show sources
+                    if response["sources"]:
+                        with st.expander("📚 Sources Used"):
+                            for source in response["sources"]:
+                                st.write(f"• {source}")
+                    
+                    # Add learning suggestions
+                    with st.expander("🎯 Learning Suggestions", expanded=False):
+                        st.markdown("""
+                        **To enhance your learning:**
+                        - Try asking follow-up questions about specific concepts
+                        - Request examples or real-world applications
+                        - Ask for connections to other chapters
+                        - Request summaries of complex topics
+                        - Ask "How does this relate to...?" for deeper understanding
+                        """)
+                    
+                    # Add to history
+                    st.session_state.teaching_messages.append({
+                        "role": "assistant", 
+                        "content": ai_content,
+                        "sources": response["sources"]
+                    })
+                    
+                except Exception as e:
+                    st.error(f"Teaching error: {str(e)}")
+                    st.info("Please try again or check your API key.")
+
 def main():
-    st.title("📚 Book AI Processor")
-    st.write("Upload a PDF to extract its structure and content by chapters and subtopics.")
+    st.title("📚 Book AI Processor with Teaching Assistant")
+    st.write("Upload a PDF and get an AI teacher powered by Groq!")
+    
+    # API Key input in sidebar
+    with st.sidebar:
+        st.header("🔑 API Configuration")
+        api_key = st.text_input(
+            "Groq API Key:", 
+            type="password", 
+            placeholder="Enter your Groq API key",
+            help="Get your free API key from https://console.groq.com/"
+        )
+        
+        if api_key:
+            st.success("API Key configured! 🎉")
+        
+        st.markdown("---")
+        st.markdown("### 🚀 Features")
+        st.markdown("""
+        - **Document Structure**: Extract chapters and sections
+        - **Smart Search**: Find content across the book
+        - **AI Teacher**: Interactive learning with RAG
+        - **Export Options**: Download structured data
+        """)
     
     uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
     
     if uploaded_file is not None:
-        # Create tabs for different views
-        tab1, tab2, tab3 = st.tabs(["Structure", "Search", "Export"])
+        # Create tabs
+        tab1, tab2, tab3, tab4 = st.tabs(["📖 Structure", "🔍 Search", "🎓 AI Teacher", "📊 Export"])
         
         # Save uploaded file to a temporary location
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -325,6 +752,9 @@ def main():
                             st.info("No matches found.")
                 
                 with tab3:
+                    create_teaching_interface(result, api_key)
+                
+                with tab4:
                     st.subheader("Export Options")
                     csv = export_chunks_to_csv(result["chunks"], result["filename"])
                     st.download_button(
