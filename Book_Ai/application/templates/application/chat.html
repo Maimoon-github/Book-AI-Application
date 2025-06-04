@@ -1,0 +1,238 @@
+{% extends 'application/base.html' %}
+
+{% block title %}AI Teacher - {{ book.title }}{% endblock %}
+
+{% block sidebar %}
+<hr>
+<h6>{{ book.title }}</h6>
+<div class="nav flex-column">
+    <a class="nav-link text-white" href="{% url 'book_detail' book.id %}">
+        <i class="fas fa-book"></i> Book Details
+    </a>
+    <a class="nav-link text-white" href="#" onclick="clearChat()">
+        <i class="fas fa-trash"></i> Clear Chat
+    </a>
+</div>
+
+<hr>
+<h6>AI Settings</h6>
+<div class="mb-3">
+    <label class="form-label text-white">Model:</label>
+    <select class="form-select form-select-sm" id="modelSelect">
+        {% for model in supported_models %}
+            <option value="{{ model }}">{{ model }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="mb-3">
+    <label class="form-label text-white">Focus Chapter:</label>
+    <select class="form-select form-select-sm" id="chapterFilter">
+        <option value="">All chapters</option>
+        {% for chapter in book.chapters.all %}
+            <option value="{{ chapter.title }}">{{ chapter.title }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1><i class="fas fa-robot"></i> AI Teacher</h1>
+                    <p class="text-muted">Ask questions about "{{ book.title }}"</p>
+                </div>
+                <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Book
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Input -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <input type="password" class="form-control" id="apiKeyInput" 
+                                   placeholder="Enter your Groq API key to start chatting...">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-grid">
+                                <button class="btn btn-success" id="connectBtn">
+                                    <i class="fas fa-plug"></i> Connect
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">
+                        Get your free API key from <a href="https://console.groq.com/" target="_blank">Groq Console</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-robot fa-3x mb-3"></i>
+                        <h4>Welcome to your AI Teacher!</h4>
+                        <p>Enter your Groq API key above and start asking questions about your book.</p>
+                        <div class="mt-4">
+                            <h6>Example questions you can ask:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-question-circle text-primary"></i> "What is the main theme of this book?"</li>
+                                <li><i class="fas fa-question-circle text-primary"></i> "Can you summarize chapter 3?"</li>
+                                <li><i class="fas fa-question-circle text-primary"></i> "What are the key concepts explained?"</li>
+                                <li><i class="fas fa-question-circle text-primary"></i> "How does the author explain [specific topic]?"</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Existing messages -->
+                    {% for message in messages %}
+                        <div class="message {{ message.message_type }}">
+                            <div class="message-bubble">
+                                {% if message.message_type == 'ai' %}
+                                    <i class="fas fa-robot"></i>
+                                {% else %}
+                                    <i class="fas fa-user"></i>
+                                {% endif %}
+                                {{ message.content|linebreaks }}
+                            </div>
+                            <small class="text-muted d-block mt-1">{{ message.timestamp|date:"H:i" }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" 
+                               placeholder="Ask me anything about this book..." disabled>
+                        <button class="btn btn-primary" type="button" id="sendBtn" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="loading-spinner text-center mt-2">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">AI is thinking...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let isConnected = false;
+let apiKey = '';
+
+$(document).ready(function() {
+    // Connect API key
+    $('#connectBtn').click(function() {
+        apiKey = $('#apiKeyInput').val().trim();
+        if (!apiKey) {
+            alert('Please enter your Groq API key');
+            return;
+        }
+        
+        isConnected = true;
+        $('#messageInput').prop('disabled', false);
+        $('#sendBtn').prop('disabled', false);
+        $('#connectBtn').text('Connected').removeClass('btn-success').addClass('btn-secondary');
+        $('#apiKeyInput').prop('disabled', true);
+        
+        // Add welcome message
+        addMessage('ai', 'Hello! I\'m your AI teacher for "{{ book.title }}". What would you like to learn about this book?');
+    });
+
+    // Send message
+    $('#sendBtn').click(sendMessage);
+    $('#messageInput').keypress(function(e) {
+        if (e.which == 13) {
+            sendMessage();
+        }
+    });
+});
+
+function sendMessage() {
+    if (!isConnected) {
+        alert('Please connect with your API key first');
+        return;
+    }
+
+    const message = $('#messageInput').val().trim();
+    if (!message) return;
+
+    // Add user message
+    addMessage('user', message);
+    $('#messageInput').val('');
+
+    // Show loading
+    $('.loading-spinner').show();
+    $('#sendBtn').prop('disabled', true);
+
+    // Send to API
+    const data = {
+        message: message,
+        api_key: apiKey,
+        model: $('#modelSelect').val(),
+        chapter_filter: $('#chapterFilter').val()
+    };
+
+    $.ajax({
+        url: `/api/chat/{{ book.id }}/send/`,
+        method: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        success: function(response) {
+            addMessage('ai', response.response);
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred';
+            addMessage('ai', `Sorry, I encountered an error: ${error}`);
+        },
+        complete: function() {
+            $('.loading-spinner').hide();
+            $('#sendBtn').prop('disabled', false);
+        }
+    });
+}
+
+function addMessage(type, content) {
+    const messageHtml = `
+        <div class="message ${type}">
+            <div class="message-bubble">
+                <i class="fas fa-${type === 'ai' ? 'robot' : 'user'}"></i>
+                ${content.replace(/\n/g, '<br>')}
+            </div>
+            <small class="text-muted d-block mt-1">${new Date().toLocaleTimeString()}</small>
+        </div>
+    `;
+    
+    $('#chatMessages').append(messageHtml);
+    $('#chatMessages').scrollTop($('#chatMessages')[0].scrollHeight);
+}
+
+function clearChat() {
+    if (confirm('Are you sure you want to clear the chat history?')) {
+        $('.message').remove();
+        addMessage('ai', 'Chat history cleared. How can I help you with "{{ book.title }}"?');
+    }
+}
+</script>
+{% endblock %}
