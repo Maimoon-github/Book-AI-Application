@@ -1,4 +1,4 @@
-﻿name: Python Package using Conda
+name: Python Package using Conda
 
 on:
   push:
@@ -17,9 +17,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Miniconda
+        uses: actions/checkout@v3      - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
