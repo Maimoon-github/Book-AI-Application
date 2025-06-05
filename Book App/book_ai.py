@@ -184,39 +184,24 @@ Remember: You are not just answering questions - you are facilitating deep, mean
         )
     
     def create_rag_chunks(self, book_chunks):
-        """Split large chapters into smaller, contextual chunks"""
+        """Split large chapters into smaller, contextual chunks using overlapping sliding windows"""
         rag_chunks = []
-        
+
+        window_size = 400  # max words per chunk
+        overlap_size = 50  # words to overlap between chunks
+
         for chapter in book_chunks:
-            chapter_text = chapter['content']
-            sentences = chapter_text.split('. ')
-            
-            current_chunk = ""
-            word_count = 0
-            
-            for sentence in sentences:
-                sentence_words = len(sentence.split())
-                
-                if word_count + sentence_words > 400:
-                    if current_chunk.strip():
-                        rag_chunks.append({
-                            'text': current_chunk.strip(),
-                            'metadata': {
-                                'chapter': chapter['title'],
-                                'start_page': chapter['start_page'],
-                                'end_page': chapter['end_page'],
-                                'chunk_type': 'content'
-                            }
-                        })
-                    current_chunk = sentence + '. '
-                    word_count = sentence_words
-                else:
-                    current_chunk += sentence + '. '
-                    word_count += sentence_words
-            
-            if current_chunk.strip():
+            words = chapter['content'].split()
+            total_words = len(words)
+            start_idx = 0
+
+            while start_idx < total_words:
+                end_idx = min(start_idx + window_size, total_words)
+                chunk_words = words[start_idx:end_idx]
+                chunk_text = ' '.join(chunk_words)
+
                 rag_chunks.append({
-                    'text': current_chunk.strip(),
+                    'text': chunk_text,
                     'metadata': {
                         'chapter': chapter['title'],
                         'start_page': chapter['start_page'],
@@ -224,7 +209,14 @@ Remember: You are not just answering questions - you are facilitating deep, mean
                         'chunk_type': 'content'
                     }
                 })
-        
+
+                # Stop if reached end
+                if end_idx == total_words:
+                    break
+
+                # Move window by window_size - overlap_size
+                start_idx += window_size - overlap_size
+
         return rag_chunks
     
     def retrieve_context(self, query, chapter_filter=None):
@@ -542,13 +534,57 @@ def display_hierarchical_toc(hierarchical_chunks):
 def export_chunks_to_csv(chunks, filename):
     """Export chunks to CSV file."""
     df = pd.DataFrame(chunks)
-    # Select only the columns we want to export
-    export_df = df[['title', 'level', 'start_page', 'end_page']]
+    # Select only the columns we want to export and create a copy to avoid warnings
+    export_df = df[['title', 'level', 'start_page', 'end_page']].copy()
     # Add 1 to page numbers for display (convert from 0-indexed to 1-indexed)
-    export_df['start_page'] += 1
-    export_df['end_page'] += 1
+    export_df.loc[:, 'start_page'] += 1
+    export_df.loc[:, 'end_page'] += 1
     # Create a downloadable CSV
     return export_df.to_csv(index=False).encode('utf-8')
+
+def export_chunks_to_markdown(chunks, filename):
+    """Export chunks to Markdown file."""
+    base_name = os.path.splitext(filename)[0]
+    markdown_content = f"# {base_name} - Document Structure\n\n"
+    
+    for chunk in chunks:
+        level_prefix = "#" * (chunk['level'] + 1)
+        markdown_content += f"{level_prefix} {chunk['title']}\n\n"
+        markdown_content += f"**Pages:** {chunk['start_page'] + 1}-{chunk['end_page'] + 1}\n\n"
+        
+        # Add a sample of content (first 500 characters)
+        if chunk['content']:
+            content_preview = chunk['content'][:500]
+            if len(chunk['content']) > 500:
+                content_preview += "..."
+            markdown_content += f"{content_preview}\n\n"
+        
+        markdown_content += "---\n\n"
+    
+    return markdown_content.encode('utf-8')
+
+def export_chunks_to_pdf_text(chunks, filename):
+    """Export chunks structure to a text file (since actual PDF generation requires additional libraries)."""
+    base_name = os.path.splitext(filename)[0]
+    pdf_text_content = f"{base_name} - Document Structure\n"
+    pdf_text_content += "=" * 50 + "\n\n"
+    
+    for chunk in chunks:
+        level_indent = "  " * (chunk['level'] - 1)
+        pdf_text_content += f"{level_indent}{chunk['title']}\n"
+        pdf_text_content += f"{level_indent}Pages: {chunk['start_page'] + 1}-{chunk['end_page'] + 1}\n"
+        pdf_text_content += f"{level_indent}{'-' * 30}\n"
+        
+        # Add a sample of content
+        if chunk['content']:
+            content_preview = chunk['content'][:300]
+            if len(chunk['content']) > 300:
+                content_preview += "..."
+            pdf_text_content += f"{level_indent}{content_preview}\n"
+        
+        pdf_text_content += "\n"
+    
+    return pdf_text_content.encode('utf-8')
 
 def create_teaching_interface(result, api_key):
     """Create interactive teaching interface with LangGraph"""
@@ -685,6 +721,9 @@ def main():
     st.title("📚 Book AI Processor with Teaching Assistant")
     st.write("Upload a PDF and get an AI teacher powered by Groq!")
     
+    # Note about warnings (optional to display)
+    # st.info("ℹ️ Note: PyTorch warnings about 'torch.classes' are harmless and can be ignored.")
+    
     # API Key input in sidebar
     with st.sidebar:
         st.header("🔑 API Configuration")
@@ -753,16 +792,43 @@ def main():
                 
                 with tab3:
                     create_teaching_interface(result, api_key)
-                
-                with tab4:
-                    st.subheader("Export Options")
-                    csv = export_chunks_to_csv(result["chunks"], result["filename"])
-                    st.download_button(
-                        label="Download Structure as CSV",
-                        data=csv,
-                        file_name=f"{os.path.splitext(result['filename'])[0]}_structure.csv",
-                        mime="text/csv"
-                    )
+                  with tab4:
+                    # Show supported export formats in subheader
+                    st.subheader("Export Options: CSV · PDF · MD")
+                    
+                    st.write("Choose your preferred export format:")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        csv_data = export_chunks_to_csv(result["chunks"], result["filename"])
+                        st.download_button(
+                            label="📊 Download CSV",
+                            data=csv_data,
+                            file_name=f"{os.path.splitext(result['filename'])[0]}_structure.csv",
+                            mime="text/csv",
+                            help="Download structured data as CSV for spreadsheet analysis"
+                        )
+                    
+                    with col2:
+                        pdf_data = export_chunks_to_pdf_text(result["chunks"], result["filename"])
+                        st.download_button(
+                            label="📄 Download PDF Text",
+                            data=pdf_data,
+                            file_name=f"{os.path.splitext(result['filename'])[0]}_structure.txt",
+                            mime="text/plain",
+                            help="Download document structure as formatted text"
+                        )
+                    
+                    with col3:
+                        md_data = export_chunks_to_markdown(result["chunks"], result["filename"])
+                        st.download_button(
+                            label="📝 Download Markdown",
+                            data=md_data,
+                            file_name=f"{os.path.splitext(result['filename'])[0]}_structure.md",
+                            mime="text/markdown",
+                            help="Download as Markdown file for documentation"
+                        )
             else:
                 st.error("Processing failed.")
         finally:
