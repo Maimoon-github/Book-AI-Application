@@ -2,9 +2,15 @@ import streamlit as st
 import os
 import re
 import tempfile
+import warnings
 from typing import List, Dict, Tuple, Optional, Any, Sequence
 import pandas as pd
 import fitz  # PyMuPDF
+
+# Suppress specific PyTorch warnings that are harmless in Streamlit context
+warnings.filterwarnings("ignore", message=".*torch.classes.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+os.environ["PYTORCH_DISABLE_VERSION_CHECK"] = "1"
 
 # RAG and AI imports
 import chromadb
@@ -765,8 +771,7 @@ def main():
             if result:
                 with tab1:
                     st.success(f"✅ Processing complete: {result['filename']} ({result['page_count']} pages)")
-                    
-                    # Display hierarchical table of contents
+                      # Display hierarchical table of contents
                     st.subheader("Document Structure")
                     display_hierarchical_toc(result["hierarchical_chunks"])
                 
@@ -792,7 +797,8 @@ def main():
                 
                 with tab3:
                     create_teaching_interface(result, api_key)
-                  with tab4:
+                
+                with tab4:
                     # Show supported export formats in subheader
                     st.subheader("Export Options: CSV · PDF · MD")
                     
