@@ -8,12 +8,24 @@
         body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
         .container { display: flex; flex-direction: column; gap: 20px; }
         .answer-box { background-color: #f0f0f0; padding: 15px; border-radius: 5px; }
+        .stats { background-color: #e6f7ff; padding: 10px; border-radius: 5px; }
+        .action-buttons { display: flex; gap: 10px; margin: 10px 0; }
+        .action-buttons a { background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; }
+        .action-buttons a:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Ask a Question About the Book</h1>
-        <p><a href="{% url 'book_ai:upload_document' %}">Upload a New Document</a></p>
+        <h1>Book AI - Ask Questions About Your Documents</h1>
+        
+        <div class="stats">
+            <p>Library status: <strong>{{ document_count }}</strong> documents with <strong>{{ chunk_count }}</strong> searchable chunks</p>
+        </div>
+        
+        <div class="action-buttons">
+            <a href="{% url 'book_ai:upload_document' %}">Upload a New Document</a>
+        </div>
+        
         <form method="post">
             {% csrf_token %}
             <input type="text" name="query" placeholder="Enter your question here" style="width: 80%; padding: 10px;">
@@ -28,7 +40,13 @@
         {% if answer %}
             <div class="answer-box">
                 <h2>Answer:</h2>
-                <p>{{ answer }}</p>
+                <div>{{ answer|linebreaks }}</div>
+            </div>
+        {% endif %}
+        
+        {% if not document_count %}
+            <div class="answer-box">
+                <p><strong>No documents in the library yet.</strong> Please upload documents to enable question answering.</p>
             </div>
         {% endif %}
     </div>

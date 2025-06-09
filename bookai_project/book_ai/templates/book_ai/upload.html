@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Document</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; line-height: 1.6; }
+        .container { display: flex; flex-direction: column; gap: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { padding: 10px; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; cursor: pointer; border-radius: 4px; font-size: 16px; }
+        .btn:hover { background-color: #45a049; }
+        .btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .btn-secondary { background-color: #6c757d; color: white; padding: 10px 15px; border: none; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .message { padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .file-info { background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .file-info h3 { margin-top: 0; color: #495057; }
+        .file-info ul { margin-bottom: 0; }
+        .processing-indicator { display: none; text-align: center; padding: 20px; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #09f; animation: spin 1s linear infinite; display: inline-block; }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .upload-wrapper { position: relative; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+    <script>
+        function showProcessing() {
+            document.getElementById('upload-form').style.display = 'none';
+            document.getElementById('processing-indicator').style.display = 'block';
+            document.getElementById('upload-button').disabled = true;
+            return true;
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Upload a Document</h1>
+            <a href="{% url 'book_ai:home' %}" class="btn-secondary">Back to Home</a>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <div id="upload-form">
+            <form method="post" enctype="multipart/form-data" onsubmit="return showProcessing();">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_file">Select a document to upload:</label>
+                    {{ form.file }}
+                </div>
+                <button id="upload-button" class="btn" type="submit">Upload and Process</button>
+            </form>
+        </div>
+        
+        <div id="processing-indicator" class="processing-indicator">
+            <div class="spinner"></div>
+            <p>Processing your document. This may take a few moments...</p>
+            <p>The document will be chunked semantically and indexed for retrieval.</p>
+        </div>
+        
+        <div class="file-info">
+            <h3>Supported File Formats</h3>
+            <ul>
+                {% for format in supported_formats %}
+                    <li>{{ format }} files</li>
+                {% endfor %}
+            </ul>
+            <h3>Processing Steps</h3>
+            <ol>
+                <li>Document is uploaded and text is extracted</li>
+                <li>Content is semantically chunked based on chapters and context</li>
+                <li>Each chunk is enriched with metadata (keywords, difficulty level, etc.)</li>
+                <li>Chunks are stored in the database for quick retrieval</li>
+            </ol>
+            <p><strong>Note:</strong> Large documents may take longer to process. Please be patient.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Add file name display when a file is selected
+        document.getElementById('id_file').addEventListener('change', function() {
+            const fileName = this.files[0]?.name || 'No file selected';
+            const fileLabel = document.createElement('p');
+            fileLabel.textContent = `Selected: ${fileName}`;
+            
+            // Remove any existing file name display
+            const existingLabel = document.querySelector('.file-name-display');
+            if (existingLabel) {
+                existingLabel.remove();
+            }
+            
+            fileLabel.className = 'file-name-display';
+            this.parentNode.appendChild(fileLabel);
+        });
+    </script>
+</body>
+</html>
