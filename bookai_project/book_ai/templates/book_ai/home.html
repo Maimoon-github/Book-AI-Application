@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book AI</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        .container { display: flex; flex-direction: column; gap: 20px; }
+        .answer-box { background-color: #f0f0f0; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ask a Question About the Book</h1>
+        <form method="post">
+            {% csrf_token %}
+            <input type="text" name="query" placeholder="Enter your question here" style="width: 80%; padding: 10px;">
+            <button type="submit" style="padding: 10px;">Ask</button>
+        </form>
+
+        {% if query %}
+            <h2>Your Question:</h2>
+            <p>{{ query }}</p>
+        {% endif %}
+
+        {% if answer %}
+            <div class="answer-box">
+                <h2>Answer:</h2>
+                <p>{{ answer }}</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
