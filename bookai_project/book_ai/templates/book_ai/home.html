@@ -13,6 +13,7 @@
 <body>
     <div class="container">
         <h1>Ask a Question About the Book</h1>
+        <p><a href="{% url 'book_ai:upload_document' %}">Upload a New Document</a></p>
         <form method="post">
             {% csrf_token %}
             <input type="text" name="query" placeholder="Enter your question here" style="width: 80%; padding: 10px;">
