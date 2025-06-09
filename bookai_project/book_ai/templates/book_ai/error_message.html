@@ -1,0 +1,39 @@
+<!-- filepath: d:\maimoon\Vs Code\Book-AI-Application\Book-AI-Application\bookai_project\book_ai\templates\book_ai\error_message.html -->
+<div class="alert {% if level == 'error' %}alert-danger{% elif level == 'info' %}alert-info{% else %}alert-warning{% endif %} alert-dismissible fade show" role="alert">
+    <h4 class="alert-heading">
+        {% if level == 'error' %}
+        <i class="fas fa-exclamation-triangle"></i> Error Processing Document
+        {% elif level == 'info' %}
+        <i class="fas fa-info-circle"></i> Processing Status
+        {% else %}
+        <i class="fas fa-exclamation-circle"></i> Warning
+        {% endif %}
+    </h4>
+    
+    <p>{{ message }}</p>
+    
+    {% if level == 'error' %}
+    <hr>
+    <div class="mt-2">
+        <h5>Troubleshooting Tips:</h5>
+        <ul class="mb-0">
+            {% if 'encrypted' in message %}
+            <li>Use Adobe Acrobat or another PDF tool to remove password protection</li>
+            <li>Save the document as an unprotected PDF file</li>
+            {% elif 'scanned' in message or 'images only' in message %}
+            <li>Use OCR software to convert scanned pages to searchable text</li>
+            <li>Upload a PDF that contains actual text content</li>
+            {% elif 'corrupted' in message %}
+            <li>Try opening and resaving the PDF in Adobe Acrobat</li>
+            <li>Check if the file was downloaded completely</li>
+            {% else %}
+            <li>Ensure the PDF contains actual text (not just images)</li>
+            <li>Try converting the document to PDF again</li>
+            <li>Check that the file is not corrupted</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

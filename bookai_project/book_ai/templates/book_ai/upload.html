@@ -48,12 +48,9 @@
             <h1>Upload a Document</h1>
             <a href="{% url 'book_ai:home' %}" class="btn-secondary">Back to Home</a>
         </div>
-        
-        {% if messages %}
+          {% if messages %}
             {% for message in messages %}
-                <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
-                    {{ message }}
-                </div>
+                {% include "book_ai/error_message.html" with message=message level=message.tags %}
             {% endfor %}
         {% endif %}
         

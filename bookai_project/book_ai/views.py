@@ -1,5 +1,6 @@
 # book_ai/views.py
 
+import sys
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .rag_core import get_answer, initialize_retriever
@@ -33,6 +34,14 @@ def upload_document(request):
     View to handle document upload, chunking, and embedding.
     Shows detailed progress information and handles errors gracefully.
     """
+    # Define supported formats with descriptions
+    supported_formats = {
+        'PDF': 'Portable Document Format',
+        'TXT': 'Plain Text',
+        'MD': 'Markdown',
+        'DOCX': 'Microsoft Word'
+    }
+    
     if request.method == 'POST':
         form = DocumentUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -54,14 +63,35 @@ def upload_document(request):
                     document.delete()
                     messages.error(request, f"Unsupported file format: .{file_extension}. Please upload PDF, TXT, MD, or DOCX files.")
                     return redirect('book_ai:upload_document')
-                
-                # Extract chunks using hierarchical chunking
+                  # Extract chunks using hierarchical chunking with detailed error handling
                 try:
                     messages.info(request, "Extracting text and creating semantic chunks...")
+                    
+                    # Make sure file is at the start
+                    file_obj.seek(0)
+                    
+                    # Try to process the document
                     chunks = chunker.process_document(file_obj)
+
+                except ValueError as ve:
+                    # Handle expected errors with specific messages
+                    document.delete()
+                    error_msg = str(ve)
+                    if "encrypted" in error_msg:
+                        messages.error(request, "This PDF is password-protected and cannot be processed. Please remove the password protection and try again.")
+                    elif "scanned" in error_msg or "images only" in error_msg:
+                        messages.error(request, "Could not extract text from this PDF. The file appears to be scanned or contains only images. Please upload a PDF with actual text content.")
+                    elif "corrupted" in error_msg:
+                        messages.error(request, "This PDF file appears to be corrupted. Please ensure the file is valid and try again.")
+                    else:
+                        messages.error(request, f"Error processing document: {error_msg}")
+                    return redirect('book_ai:upload_document')
+
                 except Exception as e:
+                    # Handle unexpected errors
                     document.delete()
                     messages.error(request, f"Error during document chunking: {str(e)}")
+                    print(f"Unexpected error during document processing: {str(e)}", file=sys.stderr)
                     return redirect('book_ai:upload_document')
                 
                 # No valid chunks found
