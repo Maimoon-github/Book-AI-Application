@@ -43,11 +43,12 @@ class DependencyManager:
         
         # Check if required dependencies are met
         missing_required = [pkg for pkg, info in self.dependencies.items() 
-                           if info["required"] and not info["available"]]
+                          if info["required"] and not info["available"]]
         if missing_required:
             required_list = ", ".join(missing_required)
             warnings.warn(f"Required dependencies missing: {required_list}. Some features will be disabled.")
-      def _check_package(self, package_name: str) -> None:
+
+    def _check_package(self, package_name: str) -> None:
         """Check if a package is available and get its version."""
         try:
             # Special case for faiss-cpu package which is imported as 'faiss'
@@ -71,7 +72,7 @@ class DependencyManager:
                 
                 self.dependencies[package_name]["available"] = False
                 return
-                
+            
             # Normal package import
             module = importlib.import_module(package_name)
             

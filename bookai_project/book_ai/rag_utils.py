@@ -108,8 +108,7 @@ class HierarchicalChunker:
         if not chapters:
             # No chapters found, fall back to basic chunking
             return self.basic_chunk(content)
-            
-        # Process each chapter into smaller semantic chunks
+              # Process each chapter into smaller semantic chunks
         chunks = []
         for chapter in chapters:
             chapter_chunks = self.chunk_chapter(chapter)
