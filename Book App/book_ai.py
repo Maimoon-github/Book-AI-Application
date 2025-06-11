@@ -79,64 +79,89 @@ def generate_suggested_questions(chunk_content: str) -> list:
     content_lower = chunk_content.lower()
     words = content_lower.split()
     
-    # Basic question templates
-    templates = [
-        "What is the significance of {topic} in this chapter?",
-        "How does {topic} relate to {other_topic}?",
-        "Can you explain the concept of {topic} in simple terms?",
-        "What are the practical applications of {topic}?",
-        "Why is {topic} important in this context?"
-    ]
+    # Enhanced set of stop words to filter out common words
+    stop_words = {
+        'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 
+        'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had',
+        'this', 'that', 'these', 'those', 'such', 'what', 'which', 'who',
+        'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few',
+        'more', 'most', 'some', 'such', 'than', 'too', 'very', 'can', 'will',
+        'just', 'should', 'now', 'also', 'may', 'chapter', 'book', 'section'
+    }
     
-    # Common academic/technical words to ignore
-    stop_words = {'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with'}
+    # Extract meaningful words (more than 4 chars, not in stop words)
+    meaningful_words = [word for word in words 
+                        if len(word) > 4 and word not in stop_words]
     
-    # Find potential topics (words that appear multiple times)
+    # Count word frequency
     word_freq = {}
-    for word in words:
-        if (len(word) > 4 and  # Ignore short words
-            word not in stop_words and
-            word.isalnum()):  # Only consider alphanumeric words
+    for word in meaningful_words:
+        if word.isalnum():  # Only consider alphanumeric words
             word_freq[word] = word_freq.get(word, 0) + 1
     
-    # Get most frequent meaningful words as topics
-    topics = sorted([(w, f) for w, f in word_freq.items() if f >= 2], 
-                   key=lambda x: x[1], 
-                   reverse=True)[:5]
+    # Extract multi-word phrases (2-3 words)
+    phrases = []
+    sentences = [s.strip() for s in content_lower.split('.') if len(s.strip()) > 20]
+    for sentence in sentences:
+        words = sentence.split()
+        for i in range(len(words) - 1):
+            if (words[i] not in stop_words and 
+                words[i+1] not in stop_words and
+                len(words[i]) > 3 and len(words[i+1]) > 3):
+                phrase = f"{words[i]} {words[i+1]}"
+                phrases.append(phrase)
+    
+    # Count phrase frequencies
+    phrase_freq = {}
+    for phrase in phrases:
+        phrase_freq[phrase] = phrase_freq.get(phrase, 0) + 1
+        
+    # Get top words and phrases
+    top_words = sorted([(w, f) for w, f in word_freq.items() if f >= 3], 
+                      key=lambda x: x[1], 
+                      reverse=True)[:5]
+    
+    top_phrases = sorted(phrase_freq.items(), key=lambda x: x[1], reverse=True)[:3]
     
     suggested_questions = []
     
-    # Always add these fundamental questions
-    suggested_questions.extend([
-        "What are the main concepts covered in this chapter?",
-        "Can you summarize the key points of this chapter?",
-    ])
+    # Add fundamental understanding questions
+    suggested_questions.append("What are the main concepts covered in this chapter?")
+    suggested_questions.append("Can you summarize the key points of this chapter?")
     
-    # Generate contextual questions based on identified topics
-    if topics:
-        for topic, _ in topics:
-            # Add topic-specific questions
-            suggested_questions.append(f"What is the role of {topic} discussed in this chapter?")
-            
-            # Find related topics for comparison questions
-            related_topics = [t for t, _ in topics if t != topic][:2]
-            if related_topics:
-                suggested_questions.append(
-                    f"How does {topic} relate to {related_topics[0]}?")
+    # Add questions based on important individual words
+    for word, _ in top_words:
+        suggested_questions.append(f"What does '{word}' mean in the context of this chapter?")
+        suggested_questions.append(f"Why is '{word}' important to understand here?")
     
-    # Add some analytical questions
+    # Add questions based on important phrases
+    for phrase, _ in top_phrases:
+        suggested_questions.append(f"Can you explain the concept of '{phrase}'?")
+        
+    # Add analytical and application questions
     suggested_questions.extend([
-        "What are the practical implications of these concepts?",
         "How does this chapter connect to real-world applications?",
-        "What are common challenges or misconceptions about these topics?"
+        "What are common misconceptions about these topics?",
+        "How would you apply these concepts in practice?",
+        "What are the most challenging aspects to understand in this material?"
     ])
     
-    return suggested_questions[:8]  # Limit to top 8 most relevant questions
+    # Remove any duplicates and limit the number of questions
+    unique_questions = list(dict.fromkeys(suggested_questions))
+    return unique_questions[:8]  # Return top 8 most relevant questions
 
 def display_frequent_questions(chapter: str):
     """Display frequent questions and suggested questions for a chapter with interactive elements"""
     st.markdown("#### 💭 Questions About This Chapter")
     
+    # Find the chapter content for generating suggested questions
+    chunk = next((c for c in st.session_state.get('current_chunks', []) 
+                 if c['title'] == chapter), None)
+    
+    if not chunk:
+        st.warning(f"Couldn't find content for chapter: {chapter}")
+        return
+        
     # Create two columns for different types of questions
     col1, col2 = st.columns(2)
     
@@ -154,15 +179,12 @@ def display_frequent_questions(chapter: str):
     
     with col2:
         st.markdown("**💡 Suggested Questions:**")
-        # Find the chapter content
-        chunk = next((c for c in st.session_state.get('current_chunks', []) 
-                     if c['title'] == chapter), None)
-        if chunk:
-            suggested = generate_suggested_questions(chunk['content'])
-            for q in suggested:
-                if st.button(f"💭 {q}", key=f"suggest_{hash(q)}"):
-                    st.session_state.preset_question = q
-                    st.rerun()
+        # Generate content-aware questions based on the chapter content
+        suggested = generate_suggested_questions(chunk['content'])
+        for q in suggested:
+            if st.button(f"💭 {q}", key=f"suggest_{hash(q)}"):
+                st.session_state.preset_question = q
+                st.rerun()
 
 class BookTeachingRAG:
     def __init__(self):
@@ -393,15 +415,23 @@ Remember to always base your teaching on the book content. Use specific examples
         
         config = {"configurable": {"thread_id": thread_id}}
         
-        # Generate response using LangGraph
-        output = self.app.invoke(state, config)
-        ai_response = output["messages"][-1]
-        
-        return {
-            "response": ai_response,
-            "sources": source_info,
-            "context_used": len(context_data['documents'][0])
-        }
+        try:
+            # Generate response using LangGraph
+            output = self.app.invoke(state, config)
+            ai_response = output["messages"][-1]
+            
+            return {
+                "response": ai_response,
+                "sources": source_info,
+                "context_used": len(context_data['documents'][0])
+            }
+        except Exception as e:
+            error_msg = str(e)
+            # Handle API key errors specifically
+            if "401" in error_msg and "invalid_api_key" in error_msg:
+                raise ValueError("Your Groq API key appears to be invalid or expired. Please check your API key in the sidebar.")
+            # Re-raise other errors with original message
+            raise e
 
 class PDFProcessor:
     def __init__(self, file_path):
@@ -775,8 +805,15 @@ def create_teaching_interface(result, api_key):
                 st.session_state.rag_system.setup_groq_model(api_key, selected_model)
                 st.success("AI Teacher ready! 🎓")
             except Exception as e:
-                st.error(f"Failed to setup AI model: {str(e)}")
-                st.info("Please check your Groq API key and try again.")
+                error_msg = str(e)
+                if "invalid_api_key" in error_msg or "Invalid API Key" in error_msg:
+                    st.error("❌ Invalid API Key: The Groq API key you provided is incorrect or expired.")
+                    st.info("Please check your API key in the sidebar. You can get a free API key from https://console.groq.com/")
+                    # Display API key format hint
+                    st.info("Valid Groq API keys typically start with 'gsk_' followed by random characters.")
+                else:
+                    st.error(f"Failed to setup AI model: {e}")
+                    st.info("Please try again with a valid API key.")
                 return
         else:
             st.warning("Please enter your Groq API key in the sidebar to start teaching!")
@@ -822,8 +859,6 @@ def create_teaching_interface(result, api_key):
         # Generate AI response
         with st.chat_message("assistant"):
             with st.spinner("Teaching..."):
-                chapter_filter = selected_chapter if selected_chapter != "All Chapters" else None
-                
                 # Convert messages to LangChain format
                 lc_messages = []
                 for msg in st.session_state.teaching_messages[:-1]:  # Exclude the current user message
@@ -867,9 +902,18 @@ def create_teaching_interface(result, api_key):
                         "sources": response["sources"]
                     })
                     
+                except ValueError as ve:
+                    # For our custom ValueError with API key issues
+                    st.error(f"❌ API Key Error: {str(ve)}")
+                    st.info("Please update your API key in the sidebar and try again. You can get a free API key from https://console.groq.com/")
                 except Exception as e:
-                    st.error(f"Teaching error: {str(e)}")
-                    st.info("Please try again or check your API key.")
+                    error_msg = str(e)
+                    if "401" in error_msg and ("invalid_api_key" in error_msg or "Invalid API Key" in error_msg):
+                        st.error("❌ Invalid API Key: The API key you provided is not working.")
+                        st.info("Please check your API key in the sidebar. You can get a free API key from https://console.groq.com/")
+                    else:
+                        st.error(f"Teaching error: {error_msg}")
+                        st.info("Please try again or check your connection.")
 
 def main():
     st.title("📚 Book AI Processor with Teaching Assistant")
