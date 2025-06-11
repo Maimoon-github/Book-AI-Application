@@ -17,3 +17,11 @@ def add(value, arg):
         return int(value) + int(arg)
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def intdiv(value, arg):
+    """Perform integer division of value by arg."""
+    try:
+        return int(value) // int(arg)
+    except (ValueError, TypeError, ZeroDivisionError):
+        return 0
