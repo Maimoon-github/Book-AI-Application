@@ -34,15 +34,21 @@ SUPPORTED_MODELS = [
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant", 
     "gemma2-9b-it",
-    "mixtral-8x7b-32768"
+    "mixtral-8x7b-32768",
+    "mistral-saba-24b"
 ]
 
-# Use Streamlit's caching for PyTorch models to avoid reinitialization
+# Add this new function at the top level
 @st.cache_resource
-def get_sentence_transformer(model_name='all-MiniLM-L6-v2'):
-    """Load sentence transformer with proper caching to avoid conflicts with Streamlit"""
+def load_rag_components():
+    """Initialize all RAG components safely with proper caching"""
     from sentence_transformers import SentenceTransformer
-    return SentenceTransformer(model_name)
+    
+    components = {
+        'embedding_model': SentenceTransformer('all-MiniLM-L6-v2'),
+        'chroma_client': chromadb.Client()
+    }
+    return components
 
 # Question tracking with session state
 def initialize_question_tracking():
@@ -113,10 +119,11 @@ def display_frequent_questions_sidebar(chapter_titles, selected_chapter=None):
 
 class BookTeachingRAG:
     def __init__(self):
-        self.chroma_client = chromadb.Client()
+        # Get components from cached initialization
+        components = load_rag_components()
+        self.chroma_client = components['chroma_client']
+        self.embedding_model = components['embedding_model']
         self.collection = None
-        # Don't initialize the embedding model directly here
-        self.embedding_model = None
         self.groq_model = None
         self.app = None
     
@@ -238,10 +245,7 @@ Remember to always base your teaching on the book content. Use specific examples
         metadatas = []
         ids = []
         
-        # Get the embedding model using the cached function
-        if self.embedding_model is None:
-            self.embedding_model = get_sentence_transformer()
-            
+        # No need to check for embedding_model - it's initialized in __init__
         for i, chunk in enumerate(rag_chunks):
             embedding = self.embedding_model.encode(chunk['text'])
             
@@ -297,11 +301,8 @@ Remember to always base your teaching on the book content. Use specific examples
         """Retrieve most relevant chunks for the query"""
         if not self.collection:
             return {"documents": [[]], "metadatas": [[]]}
-            
-        # Ensure model is loaded through the cached function
-        if self.embedding_model is None:
-            self.embedding_model = get_sentence_transformer()
-            
+        
+        # No need to check embedding_model - it's initialized in __init__
         query_embedding = self.embedding_model.encode(query)
         
         where_clause = None
