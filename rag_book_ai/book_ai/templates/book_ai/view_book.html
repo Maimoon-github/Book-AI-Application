@@ -1,4 +1,5 @@
 {% extends 'book_ai/base.html' %}
+{% load math_filters %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -16,37 +17,165 @@
                             <i class="fas fa-cogs"></i> AI Settings
                         </button>
                     </div>
-                    
-                    <h6 class="mt-4">Chapters</h6>
-                    <div class="list-group">
-                        <a href="#" class="list-group-item list-group-item-action" 
-                           data-chapter-id="" onclick="selectChapter(event, '', 'All Chapters')">
-                            All Chapters
-                        </a>
-                        {% for chapter in chapters %}
-                            <a href="#" class="list-group-item list-group-item-action" 
-                               data-chapter-id="{{ chapter.id }}"
-                               onclick="selectChapter(event, {{ chapter.id }}, '{{ chapter.title }}')">
-                                {{ chapter.title }}
-                                {% if chapter.children.exists %}
-                                    <i class="fas fa-chevron-down float-end"></i>
-                                {% endif %}
-                            </a>
-                            {% for child in chapter.children.all %}
-                                <a href="#" class="list-group-item list-group-item-action ps-4"
-                                   data-chapter-id="{{ child.id }}"
-                                   onclick="selectChapter(event, {{ child.id }}, '{{ child.title }}')">
-                                    {{ child.title }}
-                                </a>
-                            {% endfor %}
-                        {% endfor %}
+                      <!-- Enhanced TOC Section -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list-alt me-1"></i>Table of Contents
+                            </h6>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="expandAllTOC()"><i class="fas fa-expand-arrows-alt me-1"></i>Expand All</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="collapseAllTOC()"><i class="fas fa-compress-arrows-alt me-1"></i>Collapse All</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showTOCStats()"><i class="fas fa-chart-bar me-1"></i>TOC Statistics</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- TOC Search -->
+                        <div class="mb-2">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="toc-search" placeholder="Search chapters..." onkeyup="filterTOC()">
+                                <button class="btn btn-outline-secondary" onclick="clearTOCSearch()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- TOC Statistics (collapsible) -->
+                        <div class="collapse" id="tocStats">
+                            <div class="card card-body mb-2" style="background: #f8f9fa; border: 1px solid #e9ecef;">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="border-end">
+                                            <strong class="text-primary">{{ toc_stats.total_chapters }}</strong>
+                                            <small class="d-block text-muted">Chapters</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong class="text-success">{{ toc_stats.max_depth }}</strong>
+                                        <small class="d-block text-muted">Max Depth</small>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-2">
+                                    <div class="col-6">
+                                        <div class="border-end">
+                                            <strong class="text-warning">{{ toc_stats.total_pages_covered }}</strong>
+                                            <small class="d-block text-muted">Pages</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong class="text-info">{{ toc_stats.avg_chapter_length|floatformat:1 }}</strong>
+                                        <small class="d-block text-muted">Avg Length</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Frequent Questions -->
+                    <!-- Enhanced Hierarchical TOC -->
+                    <div class="toc-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; background: #fff;">
+                        <div class="list-group list-group-flush" id="toc-list">
+                            <!-- All Chapters Option -->
+                            <a href="#" class="list-group-item list-group-item-action toc-item" 
+                               data-chapter-id="" 
+                               data-level="0"
+                               onclick="selectChapter(event, '', 'All Chapters')">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-book text-primary me-2"></i>
+                                        <strong>All Chapters</strong>
+                                    </div>
+                                    <span class="badge bg-primary">{{ book.page_count }} pages</span>
+                                </div>
+                            </a>
+                            
+                            <!-- Dynamic TOC Structure -->
+                            {% for chapter in toc_structure %}
+                                <div class="toc-chapter-group" data-level="{{ chapter.level }}">
+                                    <a href="#" class="list-group-item list-group-item-action toc-item" 
+                                       data-chapter-id="{{ chapter.id }}"
+                                       data-level="{{ chapter.level }}"
+                                       data-title="{{ chapter.title }}"
+                                       data-start-page="{{ chapter.start_page }}"
+                                       data-end-page="{{ chapter.end_page }}"
+                                       onclick="selectChapter(event, {{ chapter.id }}, '{{ chapter.title }}')">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="toc-content" style="margin-left: {% with level_minus_one=chapter.level|add:'-1' %}{{ level_minus_one|mul:'20' }}{% endwith %}px;">
+                                                {% if chapter.children %}
+                                                    <i class="fas fa-chevron-right toc-toggle me-2" onclick="toggleTOCSection(event, this)"></i>
+                                                {% else %}
+                                                    <i class="fas fa-file-alt text-muted me-2"></i>
+                                                {% endif %}
+                                                <span class="toc-title">{{ chapter.title }}</span>
+                                                {% if chapter.level > 1 %}
+                                                    <small class="text-muted ms-1">(Level {{ chapter.level }})</small>
+                                                {% endif %}
+                                            </div>
+                                            <div class="toc-meta">
+                                                <small class="text-muted">
+                                                    {% if chapter.start_page and chapter.end_page %}
+                                                        p{{ chapter.start_page }}-{{ chapter.end_page }}
+                                                    {% endif %}
+                                                    <span class="badge bg-light text-dark ms-1">{{ chapter.page_count }} pg{{ chapter.page_count|pluralize }}</span>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    
+                                    <!-- Children (initially collapsed) -->
+                                    {% if chapter.children %}
+                                        <div class="toc-children collapse">
+                                            {% for child in chapter.children %}
+                                                <a href="#" class="list-group-item list-group-item-action toc-item toc-child" 
+                                                   data-chapter-id="{{ child.id }}"
+                                                   data-level="{{ child.level }}"
+                                                   data-title="{{ child.title }}"
+                                                   data-start-page="{{ child.start_page }}"
+                                                   data-end-page="{{ child.end_page }}"
+                                                   onclick="selectChapter(event, {{ child.id }}, '{{ child.title }}')">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="toc-content" style="margin-left: {% with level_minus_one=child.level|add:'-1' %}{{ level_minus_one|mul:'20' }}{% endwith %}px;">
+                                                            <i class="fas fa-circle text-secondary me-2" style="font-size: 6px; vertical-align: middle;"></i>
+                                                            <span class="toc-title">{{ child.title }}</span>
+                                                            <small class="text-muted ms-1">({{ child.level }}.{{ forloop.counter }})</small>
+                                                        </div>
+                                                        <div class="toc-meta">
+                                                            <small class="text-muted">
+                                                                {% if child.start_page and child.end_page %}
+                                                                    p{{ child.start_page }}-{{ child.end_page }}
+                                                                {% endif %}
+                                                                <span class="badge bg-light text-dark ms-1">{{ child.page_count }} pg{{ child.page_count|pluralize }}</span>
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                      <!-- Frequent Questions -->
                     <div id="frequent-questions" class="mt-4">
-                        <h6>Frequent Questions</h6>
-                        <div id="questions-list">
-                            <p class="text-muted">Select a chapter to see frequent questions.</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                <i class="fas fa-fire text-warning me-1"></i>Popular Questions
+                            </h6>
+                            <small class="text-muted" id="question-count">0 questions</small>
+                        </div>
+                        <div id="questions-list" class="mt-2">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-question-circle fa-2x mb-2 text-muted"></i>
+                                <p class="mb-1">Select a chapter to see popular questions</p>
+                                <small>Questions from other learners will appear here</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -56,26 +185,95 @@
         <!-- Main Content -->
         <div class="col-md-9">
             <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 id="current-chapter">All Chapters</h5>
-                        <button class="btn btn-outline-danger" onclick="clearChat()">
-                            <i class="fas fa-trash"></i> Clear Chat
-                        </button>
-                    </div>
-                    
-                    <!-- Chat Area -->
-                    <div id="chat-messages" class="mb-3" style="height: 500px; overflow-y: auto;">
-                        <!-- Messages will be added here -->
-                    </div>
-                    
-                    <!-- Input Area -->
-                    <div class="input-group">
-                        <input type="text" id="question-input" class="form-control" 
-                               placeholder="Ask a question about the book...">
-                        <button class="btn btn-primary" onclick="askQuestion()">
-                            <i class="fas fa-paper-plane"></i> Send
-                        </button>
+                <div class="card-body">                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <h5 id="current-chapter" class="mb-0 me-3">All Chapters</h5>
+                            <span id="chapter-badge" class="badge bg-primary">General</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="question-counter" class="badge bg-secondary">0 questions asked</span>
+                            <button class="btn btn-outline-danger btn-sm" onclick="clearChat()" title="Clear conversation">
+                                <i class="fas fa-trash"></i> Clear
+                            </button>
+                        </div>
+                    </div>                      <!-- Chat Area -->
+                    <div id="chat-messages" class="mb-4" style="height: 450px; overflow-y: auto; border: 2px solid #e9ecef; border-radius: 15px; padding: 1.5rem; background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <div class="text-center text-muted mt-5" id="welcome-message">
+                            <div class="mb-4">
+                                <i class="fas fa-robot fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
+                                <h4 class="text-primary">Welcome to Your AI Tutor!</h4>
+                                <p class="lead">Ready to explore "{{ book.title }}"?</p>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 offset-md-3">
+                                    <div class="card border-0 bg-white shadow-sm">
+                                        <div class="card-body p-3">
+                                            <h6 class="card-title text-primary">
+                                                <i class="fas fa-graduation-cap me-1"></i>How I can help:
+                                            </h6>
+                                            <ul class="list-unstyled mb-0 text-start">
+                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Explain complex concepts</li>
+                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Summarize chapters</li>
+                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Answer specific questions</li>
+                                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Provide learning guidance</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Select a specific chapter for targeted questions, or use "All Chapters" for general inquiries.
+                                </small>
+                            </p>
+                        </div>
+                    </div><!-- Input Area -->
+                    <div class="card border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
+                        <div class="card-body p-4">
+                            <div class="row align-items-end">
+                                <div class="col">
+                                    <div class="mb-2">
+                                        <label for="question-input" class="form-label text-white fw-bold">
+                                            <i class="fas fa-comment-dots me-1"></i>Ask your question
+                                        </label>
+                                    </div>
+                                    <div class="input-group">
+                                        <textarea id="question-input" class="form-control border-0" 
+                                               placeholder="Type your question here... (e.g., 'Explain the main concept', 'Summarize this chapter', 'What are the key points?')" 
+                                               rows="2" style="resize: none; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></textarea>
+                                        <button class="btn btn-light ms-3 px-4" onclick="askQuestion()" 
+                                                style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-weight: 600;">
+                                            <i class="fas fa-paper-plane me-1"></i> Send
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <small class="text-white-50">
+                                        <i class="fas fa-lightbulb me-1"></i> 
+                                        <strong>Tip:</strong> Select a chapter for focused answers
+                                    </small>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <div id="question-suggestions" class="d-none">
+                                        <small class="text-white-50">Quick suggestions:</small>
+                                        <div class="mt-1">
+                                            <span class="badge bg-light text-dark me-1 suggestion-badge" onclick="insertSuggestion('Summarize this chapter')">
+                                                Summary
+                                            </span>
+                                            <span class="badge bg-light text-dark me-1 suggestion-badge" onclick="insertSuggestion('What are the key concepts?')">
+                                                Key Points
+                                            </span>
+                                            <span class="badge bg-light text-dark suggestion-badge" onclick="insertSuggestion('Explain with examples')">
+                                                Examples
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -128,6 +326,7 @@
 <script>
 let currentChapterId = '';
 let currentChapterTitle = 'All Chapters';
+let questionCount = 0;
 
 function selectChapter(event, chapterId, chapterTitle) {
     event.preventDefault();
@@ -136,33 +335,79 @@ function selectChapter(event, chapterId, chapterTitle) {
     
     // Update UI
     $('#current-chapter').text(chapterTitle);
+    $('#chapter-badge').text(chapterId ? 'Chapter Focused' : 'General').removeClass('bg-primary bg-success').addClass(chapterId ? 'bg-success' : 'bg-primary');
     $('.list-group-item').removeClass('active');
     $(event.target).addClass('active');
+    
+    // Show question suggestions when chapter is selected
+    if (chapterId) {
+        $('#question-suggestions').removeClass('d-none');
+    } else {
+        $('#question-suggestions').addClass('d-none');
+    }
     
     // Load frequent questions
     if (chapterId) {
         loadFrequentQuestions(chapterId);
     } else {
-        $('#questions-list').html('<p class="text-muted">Select a chapter to see frequent questions.</p>');
+        $('#questions-list').html(`
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-question-circle fa-2x mb-2 text-muted"></i>
+                <p class="mb-1">Select a chapter to see popular questions</p>
+                <small>Questions from other learners will appear here</small>
+            </div>
+        `);
+        $('#question-count').text('0 questions');
     }
 }
 
 function loadFrequentQuestions(chapterId) {
     $.get(`/chapter/${chapterId}/frequent-questions/`, function(response) {
         let html = '';
-        if (response.questions.length > 0) {
-            response.questions.forEach(q => {
+        const questions = response.questions || [];
+        $('#question-count').text(`${questions.length} question${questions.length !== 1 ? 's' : ''}`);
+        
+        if (questions.length > 0) {
+            html += '<div class="mb-3"><small class="text-muted fw-bold">💡 Click on any question to ask it instantly:</small></div>';
+            questions.forEach((q, index) => {
+                const popularityLevel = q.frequency > 5 ? 'high' : q.frequency > 2 ? 'medium' : 'low';
+                const badgeColor = popularityLevel === 'high' ? 'danger' : popularityLevel === 'medium' ? 'warning' : 'secondary';
+                const icon = popularityLevel === 'high' ? '🔥' : popularityLevel === 'medium' ? '⭐' : '💭';
+                
                 html += `
-                    <div class="frequent-question p-2 mb-1 rounded" onclick="askFrequentQuestion('${q.text}')">
-                        <small class="text-muted">${q.frequency}×</small>
-                        ${q.text}
+                    <div class="frequent-question p-3 mb-2 rounded-3 border shadow-sm" 
+                         style="cursor: pointer; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); transition: all 0.3s ease;" 
+                         onclick="askFrequentQuestion('${q.text.replace(/'/g, "\\'")}')"
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-${badgeColor} rounded-pill">
+                                ${icon} ${q.frequency}× asked
+                            </span>
+                            <small class="text-muted">#${index + 1}</small>
+                        </div>
+                        <div class="fw-bold text-dark">${q.text}</div>
+                        <small class="text-muted">
+                            <i class="fas fa-mouse-pointer me-1"></i>Click to ask this question
+                        </small>
                     </div>`;
             });
         } else {
-            html = '<p class="text-muted">No questions asked about this chapter yet.</p>';
+            html = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-lightbulb fa-2x mb-3 text-warning"></i>
+                    <h6>No questions yet for this chapter</h6>
+                    <p class="mb-2">Be the first to ask a question!</p>
+                    <small class="text-muted">Popular questions will appear here as others learn</small>
+                </div>
+            `;
         }
         $('#questions-list').html(html);
     });
+}
+
+function insertSuggestion(suggestion) {
+    $('#question-input').val(suggestion).focus();
 }
 
 function askFrequentQuestion(question) {
@@ -171,27 +416,133 @@ function askFrequentQuestion(question) {
 }
 
 function addMessage(content, role, sources = null) {
-    const messageDiv = $('<div>').addClass(`chat-message ${role}-message`);
-    messageDiv.html(`<p>${content}</p>`);
+    // Clear the initial welcome message if it exists
+    if ($('#welcome-message').length > 0) {
+        $('#chat-messages').empty();
+    }
     
-    if (sources && sources.length > 0) {
-        const sourcesList = $('<div>').addClass('sources-list mt-2');
-        sourcesList.html('<strong>Sources:</strong><ul>' + 
-            sources.map(s => `<li>${s}</li>`).join('') + '</ul>');
-        messageDiv.append(sourcesList);
+    const messageDiv = $('<div>').addClass(`chat-message ${role}-message mb-4`);
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    if (role === 'user') {
+        messageDiv.html(`
+            <div class="d-flex justify-content-end">
+                <div class="message-bubble user-bubble p-3 rounded-4" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; max-width: 80%; box-shadow: 0 4px 12px rgba(0,123,255,0.3);">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-user-circle me-2"></i>
+                        <small class="opacity-75">You • ${timestamp}</small>
+                    </div>
+                    <div style="white-space: pre-wrap;">${content}</div>
+                </div>
+            </div>
+        `);
+    } else {
+        let sourcesHtml = '';
+        if (sources && sources.length > 0) {
+            sourcesHtml = `
+                <div class="sources-list mt-3 pt-3 border-top border-light">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-book-open text-primary me-2"></i>
+                        <small class="text-muted fw-bold">Referenced Sources:</small>
+                    </div>
+                    <div class="row">
+                        ${sources.map((s, index) => `
+                            <div class="col-12 mb-1">
+                                <small class="text-muted d-flex align-items-center">
+                                    <span class="badge bg-light text-dark rounded-pill me-2">${index + 1}</span>
+                                    ${s}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        messageDiv.html(`
+            <div class="d-flex justify-content-start">
+                <div class="message-bubble assistant-bubble p-4 rounded-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 2px solid #e9ecef; max-width: 90%; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-primary">AI Tutor</div>
+                            <small class="text-muted">${timestamp} • ${currentChapterTitle}</small>
+                        </div>
+                    </div>
+                    <div style="white-space: pre-wrap; line-height: 1.6;">${content}</div>
+                    ${sourcesHtml}
+                    <div class="mt-3 pt-2 border-top border-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-thumbs-up me-1 text-success" style="cursor: pointer;" onclick="rateResponse('positive')" title="Helpful response"></i>
+                                <i class="fas fa-thumbs-down me-1 text-danger" style="cursor: pointer;" onclick="rateResponse('negative')" title="Could be better"></i>
+                            </small>
+                            <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard(this)" title="Copy response">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
     }
     
     $('#chat-messages').append(messageDiv);
     $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+    
+    // Update question counter
+    if (role === 'user') {
+        questionCount++;
+        $('#question-counter').text(`${questionCount} question${questionCount !== 1 ? 's' : ''} asked`);
+    }
 }
 
 function askQuestion() {
     const question = $('#question-input').val().trim();
-    if (!question) return;
+    if (!question) {
+        // Show a subtle animation to indicate empty input
+        $('#question-input').addClass('is-invalid');
+        setTimeout(() => $('#question-input').removeClass('is-invalid'), 1000);
+        return;
+    }
     
     // Add user message
     addMessage(question, 'user');
-    $('#question-input').val('');
+    $('#question-input').val('').css('height', 'auto');
+    
+    // Add enhanced loading indicator
+    const loadingDiv = $('<div>').addClass('chat-message assistant-message mb-4').attr('id', 'loading-message');
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    loadingDiv.html(`
+        <div class="d-flex justify-content-start">
+            <div class="message-bubble assistant-bubble p-4 rounded-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 2px solid #e9ecef; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary rounded-circle p-2 me-3">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-primary">AI Tutor</div>
+                        <small class="text-muted">${timestamp} • Analyzing...</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-3" role="status"></div>
+                    <div>
+                        <div class="fw-bold">Processing your question...</div>
+                        <small class="text-muted">Analyzing book content and preparing response</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    $('#chat-messages').append(loadingDiv);
+    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+    
+    // Disable input while processing
+    $('#question-input').prop('disabled', true);
     
     // Send request
     $.ajax({
@@ -203,29 +554,61 @@ function askQuestion() {
             chapter_id: currentChapterId
         }),
         success: function(response) {
+            // Remove loading indicator
+            $('#loading-message').remove();
+            $('#question-input').prop('disabled', false).focus();
+            
             if (response.status === 'success') {
                 addMessage(response.response, 'assistant', response.sources);
                 
                 // Reload frequent questions if in a chapter
                 if (currentChapterId) {
-                    loadFrequentQuestions(currentChapterId);
+                    setTimeout(() => loadFrequentQuestions(currentChapterId), 1000);
                 }
             } else {
-                addMessage('Error: ' + response.message, 'assistant');
+                addMessage('❌ Error: ' + response.message, 'assistant');
             }
         },
         error: function() {
-            addMessage('Sorry, something went wrong. Please try again.', 'assistant');
+            $('#loading-message').remove();
+            $('#question-input').prop('disabled', false).focus();
+            addMessage('❌ Sorry, something went wrong. Please check your API settings and try again.', 'assistant');
         }
     });
 }
 
 function clearChat() {
-    if (confirm('Are you sure you want to clear the chat history?')) {
+    if (confirm('Are you sure you want to clear the chat history? This cannot be undone.')) {
         $.get('{% url "clear_chat" book.id %}', function() {
-            $('#chat-messages').empty();
+            $('#chat-messages').html(`
+                <div class="text-center text-muted mt-5" id="welcome-message">
+                    <div class="mb-4">
+                        <i class="fas fa-robot fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
+                        <h4 class="text-primary">Chat Cleared!</h4>
+                        <p class="lead">Ready for a fresh start with "{{ book.title }}"</p>
+                    </div>
+                </div>
+            `);
+            questionCount = 0;
+            $('#question-counter').text('0 questions asked');
         });
     }
+}
+
+// Helper functions
+function rateResponse(type) {
+    // You can implement feedback collection here
+    console.log(`Response rated as: ${type}`);
+}
+
+function copyToClipboard(button) {
+    const response = $(button).closest('.assistant-bubble').find('div[style*="white-space"]').text();
+    navigator.clipboard.writeText(response).then(() => {
+        $(button).html('<i class="fas fa-check text-success"></i>');
+        setTimeout(() => {
+            $(button).html('<i class="fas fa-copy"></i>');
+        }, 2000);
+    });
 }
 
 // Save API Settings
@@ -273,16 +656,349 @@ function togglePasswordVisibility() {
 
 // Setup event handlers
 $(document).ready(function() {
-    $('#question-input').keypress(function(e) {
-        if (e.which == 13) {
+    // Auto-resize textarea
+    $('#question-input').on('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Enhanced keyboard shortcuts
+    $('#question-input').keydown(function(e) {
+        if (e.which == 13 && !e.shiftKey) {
+            e.preventDefault();
             askQuestion();
+        } else if (e.which == 13 && e.shiftKey) {
+            // Allow Shift+Enter for new line
+            return true;
         }
     });
+    
+    // Add placeholder animations
+    let placeholders = [
+        "Ask me anything about this book...",
+        "What would you like to learn?",
+        "Type your question here...",
+        "How can I help you understand this chapter?",
+        "Ask for summaries, explanations, or examples..."
+    ];
+    let placeholderIndex = 0;
+    
+    setInterval(() => {
+        if (!$('#question-input').is(':focus') && $('#question-input').val() === '') {
+            $('#question-input').attr('placeholder', placeholders[placeholderIndex]);
+            placeholderIndex = (placeholderIndex + 1) % placeholders.length;
+        }
+    }, 3000);
     
     // API Settings event handlers
     $('.toggle-password').click(togglePasswordVisibility);
     $('#save-api-settings').click(saveAPISettings);
+    
+    // Add some welcome interactivity
+    setTimeout(() => {
+        if ($('#welcome-message').length > 0) {
+            $('#welcome-message').fadeIn('slow');
+        }
+    }, 500);
+    
+    // Add focus styling for better UX
+    $('#question-input').focus(function() {
+        $(this).parent().parent().addClass('shadow-lg');
+    }).blur(function() {
+        $(this).parent().parent().removeClass('shadow-lg');
+    });
 });
+
+// Enhanced TOC Functions
+function toggleTOCSection(event, toggleIcon) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const $icon = $(toggleIcon);
+    const $chapter = $icon.closest('.toc-chapter-group');
+    const $children = $chapter.find('.toc-children');
+    
+    if ($children.hasClass('show')) {
+        $children.removeClass('show');
+        $icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        $children.addClass('show');
+        $icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+}
+
+function expandAllTOC() {
+    $('.toc-children').addClass('show');
+    $('.toc-toggle').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+}
+
+function collapseAllTOC() {
+    $('.toc-children').removeClass('show');
+    $('.toc-toggle').removeClass('fa-chevron-down').addClass('fa-chevron-right');
+}
+
+function showTOCStats() {
+    $('#tocStats').collapse('toggle');
+}
+
+function filterTOC() {
+    const searchTerm = $('#toc-search').val().toLowerCase();
+    const $tocItems = $('.toc-item');
+    
+    if (!searchTerm) {
+        $tocItems.show();
+        $('.toc-chapter-group').show();
+        return;
+    }
+    
+    $tocItems.each(function() {
+        const $item = $(this);
+        const title = $item.data('title') || $item.text();
+        
+        if (title.toLowerCase().includes(searchTerm)) {
+            $item.show();
+            $item.closest('.toc-chapter-group').show();
+            
+            // Also show parent if this is a child
+            if ($item.hasClass('toc-child')) {
+                $item.closest('.toc-children').addClass('show');
+                $item.closest('.toc-chapter-group').find('.toc-toggle')
+                     .removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            }
+        } else {
+            $item.hide();
+        }
+    });
+    
+    // Hide empty chapter groups
+    $('.toc-chapter-group').each(function() {
+        const $group = $(this);
+        const hasVisibleItems = $group.find('.toc-item:visible').length > 0;
+        $group.toggle(hasVisibleItems);
+    });
+}
+
+function clearTOCSearch() {
+    $('#toc-search').val('');
+    filterTOC();
+}
+
+// Enhanced chapter selection with TOC integration
+function selectChapter(event, chapterId, chapterTitle) {
+    event.preventDefault();
+    
+    // Update active state
+    $('.toc-item').removeClass('active');
+    $(event.target).closest('.toc-item').addClass('active');
+    
+    // Update chapter info
+    $('#current-chapter').text(chapterTitle);
+    
+    // Update chapter badge with additional info
+    const $selectedItem = $(event.target).closest('.toc-item');
+    const level = $selectedItem.data('level');
+    const startPage = $selectedItem.data('start-page');
+    const endPage = $selectedItem.data('end-page');
+    
+    let badgeText = 'General';
+    let badgeClass = 'bg-primary';
+    
+    if (chapterId) {
+        if (level > 1) {
+            badgeText = `Level ${level}`;
+            badgeClass = 'bg-info';
+        } else {
+            badgeText = 'Chapter';
+            badgeClass = 'bg-success';
+        }
+        
+        if (startPage && endPage) {
+            badgeText += ` (p${startPage}-${endPage})`;
+        }
+    }
+    
+    $('#chapter-badge').removeClass().addClass(`badge ${badgeClass}`).text(badgeText);
+    
+    // Clear chat and load questions for new chapter
+    $('#chat-messages').html(`
+        <div class="text-center text-muted mt-5">
+            <div class="mb-4">
+                <i class="fas fa-book-open fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
+                <h4 class="text-primary">Chapter Selected: ${chapterTitle}</h4>
+                <p class="lead">Ready to explore this section!</p>
+            </div>
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card border-0 bg-white shadow-sm">
+                        <div class="card-body p-3">
+                            <h6 class="card-title text-primary">
+                                <i class="fas fa-lightbulb me-1"></i>Chapter-Specific Features:
+                            </h6>
+                            <ul class="list-unstyled mb-0 text-start">
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Focused content analysis</li>
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Page-specific references</li>
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Contextual explanations</li>
+                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Related topic suggestions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    questionCount = 0;
+    $('#question-counter').text('0 questions asked');
+    
+    // Store current chapter
+    currentChapterId = chapterId;
+    
+    // Load frequent questions for this chapter
+    loadFrequentQuestions(chapterId);
+}
+
+// Add TOC-specific CSS styles
+$('<style>')
+    .prop('type', 'text/css')
+    .html(`
+        .toc-container {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        
+        .toc-item {
+            border: none !important;
+            transition: all 0.3s ease;
+            margin: 2px 0;
+            border-radius: 6px !important;
+        }
+        
+        .toc-item:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .toc-item.active {
+            background: linear-gradient(135deg, #2196f3 0%, #9c27b0 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(33,150,243,0.3);
+        }
+        
+        .toc-item.active .text-muted {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        
+        .toc-toggle {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            color: #6c757d;
+        }
+        
+        .toc-toggle:hover {
+            color: #495057;
+            transform: scale(1.1);
+        }
+        
+        .toc-children {
+            background: rgba(0,0,0,0.02);
+            border-radius: 6px;
+            margin: 4px 0;
+        }
+        
+        .toc-child {
+            background: rgba(255,255,255,0.8) !important;
+            border-left: 3px solid #e9ecef !important;
+            margin: 1px 0 !important;
+        }
+        
+        .toc-child:hover {
+            border-left-color: #007bff !important;
+            background: rgba(0,123,255,0.1) !important;
+        }
+        
+        .toc-meta .badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+        }
+        
+        .toc-title {
+            font-weight: 500;
+            line-height: 1.2;
+        }
+        
+        .list-group-flush .list-group-item:first-child {
+            border-top: none;
+        }
+        
+        .list-group-flush .list-group-item:last-child {
+            border-bottom: none;
+        }
+        
+        #toc-search {
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        #toc-search:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        }
+        
+        .toc-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .toc-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .toc-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .toc-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    `)
+    .appendTo('head');
+
+// Add CSS for suggestion badges
+$('<style>')
+    .prop('type', 'text/css')
+    .html(`
+        .suggestion-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .suggestion-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .is-invalid {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important;
+        }
+        .frequent-question {
+            transition: all 0.3s ease;
+        }
+        .message-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `)
+    .appendTo('head');
 </script>
 {% endblock %}
 {% endblock %}

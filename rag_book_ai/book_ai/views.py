@@ -5,6 +5,8 @@ from .models import Book, BookChapter, Question
 import os
 import tempfile
 from .utils.pdf_processor import PDFProcessor
+# TODO: Switch to enhanced processor after fixing import issues
+# from .utils.enhanced_pdf_processor import EnhancedPDFProcessor
 # Using the improved RAG implementation for better chunking
 from .utils.improved_book_teaching_rag import BookTeachingRAG
 from django.views.decorators.csrf import csrf_exempt
@@ -33,8 +35,7 @@ def upload_book(request):
                 tmp_file.write(chunk)
             temp_file_path = tmp_file.name
         
-        try:
-            # Process the PDF
+        try:            # Process the PDF with original processor (temporarily)
             processor = PDFProcessor(temp_file_path)
             result = processor.process_pdf()
             
@@ -89,10 +90,56 @@ def upload_book(request):
 def view_book(request, book_id):
     book = Book.objects.get(id=book_id)
     chapters = book.chapters.filter(parent=None).prefetch_related('children')
+    
+    # Build hierarchical TOC structure for better navigation
+    toc_structure = build_toc_structure(chapters)
+    toc_stats = calculate_toc_stats(book.chapters.all())
+    
     return render(request, 'book_ai/view_book.html', {
         'book': book,
-        'chapters': chapters
+        'chapters': chapters,
+        'toc_structure': toc_structure,
+        'toc_stats': toc_stats
     })
+
+def build_toc_structure(chapters):
+    """Build a hierarchical TOC structure for enhanced navigation"""
+    toc_tree = []
+    
+    def build_children(parent_chapters):
+        children = []
+        for chapter in parent_chapters:
+            child_data = {
+                'id': chapter.id,
+                'title': chapter.title,
+                'level': chapter.level,
+                'start_page': chapter.start_page,
+                'end_page': chapter.end_page,
+                'page_count': (chapter.end_page - chapter.start_page + 1) if chapter.end_page else 1,
+                'children': build_children(chapter.children.all()) if hasattr(chapter, 'children') else []
+            }
+            children.append(child_data)
+        return children
+    
+    return build_children(chapters)
+
+def calculate_toc_stats(all_chapters):
+    """Calculate TOC statistics for analysis"""
+    if not all_chapters:
+        return {}
+    
+    levels = [chapter.level for chapter in all_chapters if chapter.level]
+    total_pages = sum((chapter.end_page - chapter.start_page + 1) 
+                     for chapter in all_chapters 
+                     if chapter.start_page and chapter.end_page)
+    
+    return {
+        'total_chapters': len(all_chapters),
+        'max_depth': max(levels) if levels else 0,
+        'total_pages_covered': total_pages,
+        'avg_chapter_length': total_pages / len(all_chapters) if all_chapters else 0,
+        'chapter_distribution': {f'level_{level}': levels.count(level) for level in set(levels)} if levels else {}
+    }
 
 @csrf_exempt
 def ask_question(request, book_id):
