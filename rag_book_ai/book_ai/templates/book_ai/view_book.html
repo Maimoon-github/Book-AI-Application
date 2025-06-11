@@ -2,92 +2,53 @@
 {% load math_filters %}
 
 {% block content %}
-<div class="app-container">
-    <div class="container-fluid py-3 px-3 px-md-4">
-        <div class="row g-3">
-            <!-- Sidebar with improved mobile-responsive UI -->
-            <div class="col-lg-3 col-md-4">
-            <div class="sticky-top" style="top: 70px; z-index: 100;">
-                <!-- Book Information Card -->
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0 fw-bold">
-                            <i class="fas fa-book text-primary me-2"></i>Book Details
-                        </h5>
-                        
-                        <a href="{% url 'home' %}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Back to Library">
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="text-muted">{{ book.page_count }} pages</p>
+                    
+                    <!-- API Settings -->
+                    <div class="mb-3">
+                        <button class="btn btn-sm btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#apiSettingsModal">
+                            <i class="fas fa-cogs"></i> AI Settings
+                        </button>
                     </div>
-                    <div class="card-body">
-                        <h6 class="fw-bold book-title mb-3">{{ book.title }}</h6>
-                        
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="me-3">
-                                <i class="fas fa-file-alt me-2 text-secondary"></i>
-                                <span class="text-muted">{{ book.page_count }} pages</span>
-                            </div>
-                            <div>
-                                <i class="fas fa-clock me-2 text-secondary"></i>
-                                <span class="text-muted">~{{ book.page_count|intdiv:2 }} min</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Quick Actions -->
-                        <div class="d-flex flex-wrap gap-2 mb-3">
-                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#apiSettingsModal">
-                                <i class="fas fa-cogs me-1"></i> AI Settings
-                            </button>
-                            <a href="#ask" class="btn btn-sm btn-outline-success smooth-scroll">
-                                <i class="fas fa-question-circle me-1"></i> Ask Question
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Enhanced TOC Section -->
-                <div class="card border-0 shadow-sm mb-4" id="toc-card">
-                    <div class="card-header bg-white py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0 fw-bold">
-                                <i class="fas fa-list-alt text-primary me-2"></i>Table of Contents
-                            </h5>
+                      <!-- Enhanced TOC Section -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list-alt me-1"></i>Table of Contents
+                            </h6>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-cog"></i>
                                 </button>
-                                <ul class="dropdown-menu shadow-sm">
-                                    <li><a class="dropdown-item" href="#" onclick="expandAllTOC()"><i class="fas fa-expand-arrows-alt me-2"></i>Expand All</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="collapseAllTOC()"><i class="fas fa-compress-arrows-alt me-2"></i>Collapse All</a></li>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="expandAllTOC()"><i class="fas fa-expand-arrows-alt me-1"></i>Expand All</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="collapseAllTOC()"><i class="fas fa-compress-arrows-alt me-1"></i>Collapse All</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" onclick="showTOCStats()"><i class="fas fa-chart-bar me-2"></i>TOC Statistics</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showTOCStats()"><i class="fas fa-chart-bar me-1"></i>TOC Statistics</a></li>
                                 </ul>
                             </div>
                         </div>
-                    </div>
-                    <div class="card-body">                        <!-- Enhanced TOC Search -->
-                        <div class="mb-3">
-                            <div class="toc-search-wrapper">
-                                <span class="toc-search-icon">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" 
-                                       class="form-control" 
-                                       id="toc-search" 
-                                       placeholder="Search chapters..." 
-                                       onkeyup="filterTOC()"
-                                       autocomplete="off">
-                                <button class="btn btn-sm position-absolute end-0 top-0 mt-1 me-2 text-muted bg-transparent border-0" 
-                                        onclick="clearTOCSearch()" 
-                                        style="display: none;"
-                                        id="clear-search-btn">
+                        
+                        <!-- TOC Search -->
+                        <div class="mb-2">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="toc-search" placeholder="Search chapters..." onkeyup="filterTOC()">
+                                <button class="btn btn-outline-secondary" onclick="clearTOCSearch()">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                         </div>
                         
                         <!-- TOC Statistics (collapsible) -->
-                        <div class="collapse mb-3" id="tocStats">
+                        <div class="collapse" id="tocStats">
                             <div class="card card-body mb-2" style="background: #f8f9fa; border: 1px solid #e9ecef;">
                                 <div class="row text-center">
                                     <div class="col-6">
@@ -116,8 +77,9 @@
                             </div>
                         </div>
                     </div>
-                      <!-- Enhanced Hierarchical TOC with clear chapter structure -->
-                    <div class="toc-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 12px; background: #fff;">
+                    
+                    <!-- Enhanced Hierarchical TOC -->
+                    <div class="toc-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; background: #fff;">
                         <div class="list-group list-group-flush" id="toc-list">
                             <!-- All Chapters Option -->
                             <a href="#" class="list-group-item list-group-item-action toc-item" 
@@ -129,14 +91,14 @@
                                         <i class="fas fa-book text-primary me-2"></i>
                                         <strong>All Chapters</strong>
                                     </div>
-                                    <span class="badge bg-primary rounded-pill">{{ book.page_count }} pages</span>
+                                    <span class="badge bg-primary">{{ book.page_count }} pages</span>
                                 </div>
                             </a>
                             
-                            <!-- Dynamic TOC Structure with Chapter numbers -->
+                            <!-- Dynamic TOC Structure -->
                             {% for chapter in toc_structure %}
                                 <div class="toc-chapter-group" data-level="{{ chapter.level }}">
-                                    <a href="#" class="list-group-item list-group-item-action toc-item chapter-item" 
+                                    <a href="#" class="list-group-item list-group-item-action toc-item" 
                                        data-chapter-id="{{ chapter.id }}"
                                        data-level="{{ chapter.level }}"
                                        data-title="{{ chapter.title }}"
@@ -144,32 +106,29 @@
                                        data-end-page="{{ chapter.end_page }}"
                                        onclick="selectChapter(event, {{ chapter.id }}, '{{ chapter.title }}')">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <div class="toc-content d-flex align-items-center">
-                                                <!-- Chapter toggle icon and numbering -->
+                                            <div class="toc-content" style="margin-left: {% with level_minus_one=chapter.level|add:'-1' %}{{ level_minus_one|mul:'20' }}{% endwith %}px;">
                                                 {% if chapter.children %}
                                                     <i class="fas fa-chevron-right toc-toggle me-2" onclick="toggleTOCSection(event, this)"></i>
                                                 {% else %}
-                                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                                    <i class="fas fa-file-alt text-muted me-2"></i>
                                                 {% endif %}
-                                                
-                                                <div>
-                                                    <!-- Chapter number badge -->
-                                                    <span class="chapter-number badge bg-primary me-1">Chapter {{ forloop.counter }}</span>
-                                                    <span class="toc-title fw-medium d-block">{{ chapter.title }}</span>
-                                                </div>
+                                                <span class="toc-title">{{ chapter.title }}</span>
+                                                {% if chapter.level > 1 %}
+                                                    <small class="text-muted ms-1">(Level {{ chapter.level }})</small>
+                                                {% endif %}
                                             </div>
                                             <div class="toc-meta">
-                                                <small class="text-muted d-block text-end">
+                                                <small class="text-muted">
                                                     {% if chapter.start_page and chapter.end_page %}
                                                         p{{ chapter.start_page }}-{{ chapter.end_page }}
                                                     {% endif %}
+                                                    <span class="badge bg-light text-dark ms-1">{{ chapter.page_count }} pg{{ chapter.page_count|pluralize }}</span>
                                                 </small>
-                                                <span class="badge bg-light text-dark rounded-pill">{{ chapter.page_count }} pg{{ chapter.page_count|pluralize }}</span>
                                             </div>
                                         </div>
                                     </a>
                                     
-                                    <!-- Children (initially collapsed) with section numbers -->
+                                    <!-- Children (initially collapsed) -->
                                     {% if chapter.children %}
                                         <div class="toc-children collapse">
                                             {% for child in chapter.children %}
@@ -181,24 +140,18 @@
                                                    data-end-page="{{ child.end_page }}"
                                                    onclick="selectChapter(event, {{ child.id }}, '{{ child.title }}')">
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <div class="toc-content d-flex align-items-center">
-                                                            <!-- Indentation and section number -->
-                                                            <div style="width: 20px;"></div> <!-- Indentation -->
-                                                            <div>
-                                                                <!-- Section number -->
-                                                                <div class="d-flex align-items-center">
-                                                                    <span class="section-number badge bg-light text-primary me-1">{{ forloop.parentloop.counter }}.{{ forloop.counter }}</span>
-                                                                    <span class="toc-title">{{ child.title }}</span>
-                                                                </div>
-                                                            </div>
+                                                        <div class="toc-content" style="margin-left: {% with level_minus_one=child.level|add:'-1' %}{{ level_minus_one|mul:'20' }}{% endwith %}px;">
+                                                            <i class="fas fa-circle text-secondary me-2" style="font-size: 6px; vertical-align: middle;"></i>
+                                                            <span class="toc-title">{{ child.title }}</span>
+                                                            <small class="text-muted ms-1">({{ child.level }}.{{ forloop.counter }})</small>
                                                         </div>
                                                         <div class="toc-meta">
-                                                            <small class="text-muted d-block text-end">
+                                                            <small class="text-muted">
                                                                 {% if child.start_page and child.end_page %}
                                                                     p{{ child.start_page }}-{{ child.end_page }}
                                                                 {% endif %}
+                                                                <span class="badge bg-light text-dark ms-1">{{ child.page_count }} pg{{ child.page_count|pluralize }}</span>
                                                             </small>
-                                                            <span class="badge bg-light text-secondary rounded-pill">{{ child.page_count }} pg{{ child.page_count|pluralize }}</span>
                                                         </div>
                                                     </div>
                                                 </a>
@@ -227,105 +180,43 @@
                     </div>
                 </div>
             </div>
-        </div>        <!-- Main Content Area with App-like UI -->
-        <div class="col-lg-9 col-md-8">
-            <div class="card border-0 shadow-sm chat-app-wrapper">
-                <!-- App-like header with chapter info -->
-                <div class="chat-app-header bg-white p-3">
-                    <div class="d-flex justify-content-between align-items-center">
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-body">                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                         <div class="d-flex align-items-center">
-                            <div class="chapter-indicator me-2">
-                                <span class="bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-semibold">
-                                    <i class="fas fa-book-open me-2"></i><span id="current-chapter">All Chapters</span>
-                                </span>
-                            </div>
-                            <span id="chapter-badge" class="badge bg-primary px-2 py-1 rounded-pill">General</span>
+                            <h5 id="current-chapter" class="mb-0 me-3">All Chapters</h5>
+                            <span id="chapter-badge" class="badge bg-primary">General</span>
                         </div>
-                        <div class="chat-actions d-flex align-items-center gap-2">
-                            <span id="question-counter" class="badge bg-light text-dark px-2 py-1 rounded-pill d-none d-md-inline-flex">
-                                <i class="fas fa-comment-dots me-1"></i> <span>0</span> questions
-                            </span>
-                            <button class="btn btn-outline-danger btn-sm rounded-circle action-btn" onclick="clearChat()" data-bs-toggle="tooltip" title="Clear conversation">
-                                <i class="fas fa-trash"></i>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="question-counter" class="badge bg-secondary">0 questions asked</span>
+                            <button class="btn btn-outline-danger btn-sm" onclick="clearChat()" title="Clear conversation">
+                                <i class="fas fa-trash"></i> Clear
                             </button>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="card-body p-0 d-flex flex-column">
-                    <!-- Chat Area with improved app-like design -->
-                    <div id="chat-messages" class="chat-container p-3 p-md-4" style="flex: 1; overflow-y: auto; background-color: #f9fafb;">
-                        <div class="text-center py-5" id="welcome-message">
-                            <div class="welcome-animation mb-4">
-                                <div class="ai-avatar mb-3">
-                                    <i class="fas fa-robot fa-4x text-primary" style="opacity: 0.8;"></i>
-                                    <div class="pulse-ring"></div>
-                                </div>
-                                <h3 class="text-primary fw-bold">Welcome to Your Book AI Assistant!</h3>
-                                <p class="lead text-secondary">I'll help you explore and understand "{{ book.title }}"</p>
+                    </div>                      <!-- Chat Area -->
+                    <div id="chat-messages" class="mb-4" style="height: 450px; overflow-y: auto; border: 2px solid #e9ecef; border-radius: 15px; padding: 1.5rem; background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <div class="text-center text-muted mt-5" id="welcome-message">
+                            <div class="mb-4">
+                                <i class="fas fa-robot fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
+                                <h4 class="text-primary">Welcome to Your AI Tutor!</h4>
+                                <p class="lead">Ready to explore "{{ book.title }}"?</p>
                             </div>
-                            
-                            <div class="row justify-content-center">
-                                <div class="col-lg-8">
-                                    <div class="card border-0 shadow-sm mb-4">
-                                        <div class="card-body p-4">
-                                            <h5 class="card-title text-primary fw-bold">
-                                                <i class="fas fa-graduation-cap me-2"></i>How I Can Help You Learn
-                                            </h5>
-                                            <div class="row mt-3">
-                                                <div class="col-md-6">
-                                                    <div class="feature-item mb-3">
-                                                        <div class="d-flex">
-                                                            <div class="feature-icon me-3 text-primary">
-                                                                <i class="fas fa-book"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="mb-1 fw-bold">Explain Concepts</h6>
-                                                                <p class="text-muted small mb-0">Break down complex ideas into simple explanations</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="feature-item mb-3">
-                                                        <div class="d-flex">
-                                                            <div class="feature-icon me-3 text-primary">
-                                                                <i class="fas fa-list-alt"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="mb-1 fw-bold">Summarize</h6>
-                                                                <p class="text-muted small mb-0">Get concise chapter summaries and key points</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="feature-item mb-3">
-                                                        <div class="d-flex">
-                                                            <div class="feature-icon me-3 text-primary">
-                                                                <i class="fas fa-question-circle"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="mb-1 fw-bold">Answer Questions</h6>
-                                                                <p class="text-muted small mb-0">Get specific answers with page references</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="feature-item mb-3">
-                                                        <div class="d-flex">
-                                                            <div class="feature-icon me-3 text-primary">
-                                                                <i class="fas fa-lightbulb"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="mb-1 fw-bold">Learning Guidance</h6>
-                                                                <p class="text-muted small mb-0">Get personalized learning paths</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                            <div class="row">
+                                <div class="col-md-6 offset-md-3">
+                                    <div class="card border-0 bg-white shadow-sm">
+                                        <div class="card-body p-3">
+                                            <h6 class="card-title text-primary">
+                                                <i class="fas fa-graduation-cap me-1"></i>How I can help:
+                                            </h6>
+                                            <ul class="list-unstyled mb-0 text-start">
+                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Explain complex concepts</li>
+                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Summarize chapters</li>
+                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Answer specific questions</li>
+                                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Provide learning guidance</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
@@ -335,47 +226,49 @@
                                     <i class="fas fa-info-circle me-1"></i>
                                     Select a specific chapter for targeted questions, or use "All Chapters" for general inquiries.
                                 </small>
-                            </p>                            </div>
+                            </p>
                         </div>
-                    
-                    <!-- Question Input Area with modern design -->                    <!-- App-like Input Area with Bottom Sticky Position -->
-                    <div class="question-input-wrapper border-top app-input-area" id="question-section">
-                        <div class="app-input-container p-2 p-md-3">
-                            <!-- AI Status Indicator -->
-                            <div id="input-status" class="ai-status-indicator d-none mb-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="pulse-dot me-2"></div>
-                                    <span class="small text-primary">
-                                        AI is responding...
-                                    </span>
+                    </div><!-- Input Area -->
+                    <div class="card border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
+                        <div class="card-body p-4">
+                            <div class="row align-items-end">
+                                <div class="col">
+                                    <div class="mb-2">
+                                        <label for="question-input" class="form-label text-white fw-bold">
+                                            <i class="fas fa-comment-dots me-1"></i>Ask your question
+                                        </label>
+                                    </div>
+                                    <div class="input-group">
+                                        <textarea id="question-input" class="form-control border-0" 
+                                               placeholder="Type your question here... (e.g., 'Explain the main concept', 'Summarize this chapter', 'What are the key points?')" 
+                                               rows="2" style="resize: none; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></textarea>
+                                        <button class="btn btn-light ms-3 px-4" onclick="askQuestion()" 
+                                                style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-weight: 600;">
+                                            <i class="fas fa-paper-plane me-1"></i> Send
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <!-- App-style Input Area -->
-                            <div class="app-input-group">
-                                <div class="textarea-wrapper">                                    <textarea id="question-input" class="form-control app-textarea" 
-                                        placeholder="Ask about this book..." 
-                                        rows="1"></textarea>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <small class="text-white-50">
+                                        <i class="fas fa-lightbulb me-1"></i> 
+                                        <strong>Tip:</strong> Select a chapter for focused answers
+                                    </small>
                                 </div>
-                                <button class="btn btn-primary send-button" onclick="askQuestion()" aria-label="Send message">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                            
-                            <!-- Quick Suggestion Pills -->
-                            <div class="suggestion-area mt-2 px-1">
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button class="suggestion-pill" onclick="insertSuggestion('Summarize this chapter')">
-                                                        <i class="fas fa-list-alt me-1"></i> Summary
-                                                    </button>
-                                                    <button class="btn btn-sm btn-light rounded-pill me-2 mb-2 mb-md-0" onclick="insertSuggestion('What are the key concepts?')">
-                                                        <i class="fas fa-key me-1"></i> Key Points
-                                                    </button>
-                                                    <button class="btn btn-sm btn-light rounded-pill mb-2 mb-md-0" onclick="insertSuggestion('Explain with examples')">
-                                                        <i class="fas fa-lightbulb me-1"></i> Examples
-                                                    </button>
-                                                </div>
-                                            </div>
+                                <div class="col-md-6 text-end">
+                                    <div id="question-suggestions" class="d-none">
+                                        <small class="text-white-50">Quick suggestions:</small>
+                                        <div class="mt-1">
+                                            <span class="badge bg-light text-dark me-1 suggestion-badge" onclick="insertSuggestion('Summarize this chapter')">
+                                                Summary
+                                            </span>
+                                            <span class="badge bg-light text-dark me-1 suggestion-badge" onclick="insertSuggestion('What are the key concepts?')">
+                                                Key Points
+                                            </span>
+                                            <span class="badge bg-light text-dark suggestion-badge" onclick="insertSuggestion('Explain with examples')">
+                                                Examples
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -436,117 +329,174 @@ let currentChapterTitle = 'All Chapters';
 let questionCount = 0;
 
 function selectChapter(event, chapterId, chapterTitle) {
-    // Prevent the default behavior and stop event propagation
     event.preventDefault();
-    event.stopPropagation();
+    currentChapterId = chapterId;
+    currentChapterTitle = chapterTitle;
     
-    // Deactivate all items first
-    $('.toc-item').removeClass('active');
+    // Update UI
+    $('#current-chapter').text(chapterTitle);
+    $('#chapter-badge').text(chapterId ? 'Chapter Focused' : 'General').removeClass('bg-primary bg-success').addClass(chapterId ? 'bg-success' : 'bg-primary');
+    $('.list-group-item').removeClass('active');
+    $(event.target).addClass('active');
     
-    // Find and activate the clicked item
-    const $clickedItem = $(event.currentTarget);
-    $clickedItem.addClass('active');
-    
-    // Get chapter data from the clicked item
-    const level = $clickedItem.data('level');
-    const startPage = $clickedItem.data('start-page');
-    const endPage = $clickedItem.data('end-page');
-    
-    // Visual feedback animation
-    $clickedItem.addClass('highlight-pulse');
-    setTimeout(() => $clickedItem.removeClass('highlight-pulse'), 500);
-    
-    // Update UI elements
-    $('#current-chapter').text(chapterTitle || 'All Chapters');
-    
-    // Determine badge properties
-    let badgeText = 'General';
-    let badgeClass = 'bg-primary';
-    
+    // Show question suggestions when chapter is selected
     if (chapterId) {
-        if (level > 1) {
-            badgeText = `Section ${level}`;
-            badgeClass = 'bg-info';
-        } else {
-            badgeText = 'Chapter';
-            badgeClass = 'bg-success';
-        }
-        
-        if (startPage && endPage) {
-            badgeText += ` (p${startPage}-${endPage})`;
-        }
+        $('#question-suggestions').removeClass('d-none');
+    } else {
+        $('#question-suggestions').addClass('d-none');
     }
     
-    // Update chapter badge
-    $('#chapter-badge')
-        .removeClass()
-        .addClass(`badge ${badgeClass}`)
-        .text(badgeText);
-    
-    // Store current chapter
-    currentChapterId = chapterId;
-    
-    // Update chat interface
-    updateChatInterface(chapterTitle);
-    
-    // Load frequent questions for this chapter
-    try {
+    // Load frequent questions
+    if (chapterId) {
         loadFrequentQuestions(chapterId);
-    } catch (error) {
-        console.error('Error loading frequent questions:', error);
-        $('#frequent-questions').html(
-            `<div class="text-muted small">
-                <i class="fas fa-exclamation-circle"></i>
-                Unable to load questions. Please try again.
-            </div>`
-        );
+    } else {
+        $('#questions-list').html(`
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-question-circle fa-2x mb-2 text-muted"></i>
+                <p class="mb-1">Select a chapter to see popular questions</p>
+                <small>Questions from other learners will appear here</small>
+            </div>
+        `);
+        $('#question-count').text('0 questions');
     }
 }
 
-function updateChatInterface(chapterTitle) {
-    const template = `
-        <div class="text-center text-muted mt-5">
-            <div class="mb-4">
-                <i class="fas fa-book-open fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
-                <h4 class="text-primary">
-                    <span class="highlight-text">${chapterTitle}</span>
-                </h4>
-                <p class="lead">Ready to explore this section!</p>
+function loadFrequentQuestions(chapterId) {
+    $.get(`/chapter/${chapterId}/frequent-questions/`, function(response) {
+        let html = '';
+        const questions = response.questions || [];
+        $('#question-count').text(`${questions.length} question${questions.length !== 1 ? 's' : ''}`);
+        
+        if (questions.length > 0) {
+            html += '<div class="mb-3"><small class="text-muted fw-bold">💡 Click on any question to ask it instantly:</small></div>';
+            questions.forEach((q, index) => {
+                const popularityLevel = q.frequency > 5 ? 'high' : q.frequency > 2 ? 'medium' : 'low';
+                const badgeColor = popularityLevel === 'high' ? 'danger' : popularityLevel === 'medium' ? 'warning' : 'secondary';
+                const icon = popularityLevel === 'high' ? '🔥' : popularityLevel === 'medium' ? '⭐' : '💭';
+                
+                html += `
+                    <div class="frequent-question p-3 mb-2 rounded-3 border shadow-sm" 
+                         style="cursor: pointer; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); transition: all 0.3s ease;" 
+                         onclick="askFrequentQuestion('${q.text.replace(/'/g, "\\'")}')"
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-${badgeColor} rounded-pill">
+                                ${icon} ${q.frequency}× asked
+                            </span>
+                            <small class="text-muted">#${index + 1}</small>
+                        </div>
+                        <div class="fw-bold text-dark">${q.text}</div>
+                        <small class="text-muted">
+                            <i class="fas fa-mouse-pointer me-1"></i>Click to ask this question
+                        </small>
+                    </div>`;
+            });
+        } else {
+            html = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-lightbulb fa-2x mb-3 text-warning"></i>
+                    <h6>No questions yet for this chapter</h6>
+                    <p class="mb-2">Be the first to ask a question!</p>
+                    <small class="text-muted">Popular questions will appear here as others learn</small>
+                </div>
+            `;
+        }
+        $('#questions-list').html(html);
+    });
+}
+
+function insertSuggestion(suggestion) {
+    $('#question-input').val(suggestion).focus();
+}
+
+function askFrequentQuestion(question) {
+    $('#question-input').val(question);
+    askQuestion();
+}
+
+function addMessage(content, role, sources = null) {
+    // Clear the initial welcome message if it exists
+    if ($('#welcome-message').length > 0) {
+        $('#chat-messages').empty();
+    }
+    
+    const messageDiv = $('<div>').addClass(`chat-message ${role}-message mb-4`);
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    if (role === 'user') {
+        messageDiv.html(`
+            <div class="d-flex justify-content-end">
+                <div class="message-bubble user-bubble p-3 rounded-4" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; max-width: 80%; box-shadow: 0 4px 12px rgba(0,123,255,0.3);">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-user-circle me-2"></i>
+                        <small class="opacity-75">You • ${timestamp}</small>
+                    </div>
+                    <div style="white-space: pre-wrap;">${content}</div>
+                </div>
             </div>
-            <div class="row">
-                <div class="col-md-8 offset-md-2">
-                    <div class="card border-0 bg-white shadow-sm">
-                        <div class="card-body p-3">
-                            <h6 class="card-title text-primary">
-                                <i class="fas fa-lightbulb me-1"></i>Available Features:
-                            </h6>
-                            <ul class="list-unstyled mb-0 text-start">
-                                <li class="mb-1">
-                                    <i class="fas fa-check text-success me-2"></i>Content analysis
-                                </li>
-                                <li class="mb-1">
-                                    <i class="fas fa-check text-success me-2"></i>Page references
-                                </li>
-                                <li class="mb-1">
-                                    <i class="fas fa-check text-success me-2"></i>Smart explanations
-                                </li>
-                                <li class="mb-0">
-                                    <i class="fas fa-check text-success me-2"></i>Related topics
-                                </li>
-                            </ul>
+        `);
+    } else {
+        let sourcesHtml = '';
+        if (sources && sources.length > 0) {
+            sourcesHtml = `
+                <div class="sources-list mt-3 pt-3 border-top border-light">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-book-open text-primary me-2"></i>
+                        <small class="text-muted fw-bold">Referenced Sources:</small>
+                    </div>
+                    <div class="row">
+                        ${sources.map((s, index) => `
+                            <div class="col-12 mb-1">
+                                <small class="text-muted d-flex align-items-center">
+                                    <span class="badge bg-light text-dark rounded-pill me-2">${index + 1}</span>
+                                    ${s}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        messageDiv.html(`
+            <div class="d-flex justify-content-start">
+                <div class="message-bubble assistant-bubble p-4 rounded-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 2px solid #e9ecef; max-width: 90%; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-primary">AI Tutor</div>
+                            <small class="text-muted">${timestamp} • ${currentChapterTitle}</small>
+                        </div>
+                    </div>
+                    <div style="white-space: pre-wrap; line-height: 1.6;">${content}</div>
+                    ${sourcesHtml}
+                    <div class="mt-3 pt-2 border-top border-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-thumbs-up me-1 text-success" style="cursor: pointer;" onclick="rateResponse('positive')" title="Helpful response"></i>
+                                <i class="fas fa-thumbs-down me-1 text-danger" style="cursor: pointer;" onclick="rateResponse('negative')" title="Could be better"></i>
+                            </small>
+                            <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard(this)" title="Copy response">
+                                <i class="fas fa-copy"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    `;
+        `);
+    }
     
-    $('#chat-messages').html(template);
+    $('#chat-messages').append(messageDiv);
+    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
     
-    // Reset question count
-    questionCount = 0;
-    updateQuestionCounter();
-}
+    // Update question counter
+    if (role === 'user') {
+        questionCount++;
+        $('#question-counter').text(`${questionCount} question${questionCount !== 1 ? 's' : ''} asked`);
+    }
 }
 
 function askQuestion() {
@@ -558,40 +508,43 @@ function askQuestion() {
         return;
     }
     
-    // Hide welcome message if it exists
-    $('#welcome-message').fadeOut(300, function() {
-        $(this).remove();
-    });
-    
-    // Add user message with improved styling
+    // Add user message
     addMessage(question, 'user');
     $('#question-input').val('').css('height', 'auto');
     
-    // Show input status
-    $('#input-status').removeClass('d-none');
+    // Add enhanced loading indicator
+    const loadingDiv = $('<div>').addClass('chat-message assistant-message mb-4').attr('id', 'loading-message');
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     
-    // Add typing indicator with animation
-    const typingIndicator = $('<div class="typing-indicator mx-4 my-3" id="typing-indicator"><span></span><span></span><span></span></div>');
-    $('#chat-messages').append(typingIndicator);
+    loadingDiv.html(`
+        <div class="d-flex justify-content-start">
+            <div class="message-bubble assistant-bubble p-4 rounded-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 2px solid #e9ecef; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary rounded-circle p-2 me-3">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-primary">AI Tutor</div>
+                        <small class="text-muted">${timestamp} • Analyzing...</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-3" role="status"></div>
+                    <div>
+                        <div class="fw-bold">Processing your question...</div>
+                        <small class="text-muted">Analyzing book content and preparing response</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    $('#chat-messages').append(loadingDiv);
+    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
     
-    // Scroll to bottom smoothly
-    scrollToBottom();
-    
-    // Disable input and change button while processing
+    // Disable input while processing
     $('#question-input').prop('disabled', true);
-    const submitBtn = $('button[onclick="askQuestion()"]');
-    const originalBtnHtml = submitBtn.html();
-    submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i> Processing...').prop('disabled', true);
     
-    // Update question counter
-    questionCount++;
-    updateQuestionCounter();
-    
-    // Track request start time for minimum display time
-    const requestStartTime = Date.now();
-    const minDisplayTime = 1200; // Minimum time to show typing indicator in ms
-    
-    // Send request with improved error handling
+    // Send request
     $.ajax({
         url: '{% url "ask_question" book.id %}',
         type: 'POST',
@@ -601,862 +554,451 @@ function askQuestion() {
             chapter_id: currentChapterId
         }),
         success: function(response) {
-            // Calculate how long to show the typing indicator
-            const elapsedTime = Date.now() - requestStartTime;
-            const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
+            // Remove loading indicator
+            $('#loading-message').remove();
+            $('#question-input').prop('disabled', false).focus();
             
-            // Show typing indicator for at least minDisplayTime
-            setTimeout(function() {
-                // Remove typing indicator
-                $('#typing-indicator').remove();
-                $('#input-status').addClass('d-none');
+            if (response.status === 'success') {
+                addMessage(response.response, 'assistant', response.sources);
                 
-                // Reset input and button
-                $('#question-input').prop('disabled', false).focus();
-                submitBtn.html(originalBtnHtml).prop('disabled', false);
-                
-                if (response.status === 'success') {
-                    // Add AI response with improved styling
-                    addMessage(response.response, 'assistant', response.sources);
-                    
-                    // Store question in recent questions
-                    storeRecentQuestion(question, currentChapterId);
-                    
-                    // Reload frequent questions if in a chapter
-                    if (currentChapterId) {
-                        loadFrequentQuestions(currentChapterId);
-                    }
-                } else {
-                    // Show error message with better styling
-                    const errorMsg = `<div class="alert alert-danger">
-                                        <i class="fas fa-exclamation-circle me-2"></i>
-                                        Error: ${response.message || 'Unknown error occurred'}
-                                      </div>`;
-                    addMessage(errorMsg, 'assistant');
+                // Reload frequent questions if in a chapter
+                if (currentChapterId) {
+                    setTimeout(() => loadFrequentQuestions(currentChapterId), 1000);
                 }
-            }, remainingTime);
+            } else {
+                addMessage('❌ Error: ' + response.message, 'assistant');
+            }
         },
-        error: function(xhr) {
-            // Remove typing indicator after delay
-            setTimeout(function() {
-                $('#typing-indicator').remove();
-                $('#input-status').addClass('d-none');
-                $('#question-input').prop('disabled', false).focus();
-                submitBtn.html(originalBtnHtml).prop('disabled', false);
-                
-                let errorMessage = 'Sorry, something went wrong. Please check your API settings and try again.';
-                
-                // Try to get more specific error
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                const errorMsg = `<div class="alert alert-danger">
-                                    <i class="fas fa-exclamation-circle me-2"></i>
-                                    ${errorMessage}
-                                  </div>`;
-                addMessage(errorMsg, 'assistant');
-            }, 1000);
+        error: function() {
+            $('#loading-message').remove();
+            $('#question-input').prop('disabled', false).focus();
+            addMessage('❌ Sorry, something went wrong. Please check your API settings and try again.', 'assistant');
         }
     });
 }
 
 function clearChat() {
-    // Modern confirmation modal instead of browser alert
-    const confirmModal = `
-        <div class="modal fade" id="clearChatModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Clear Conversation</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="text-center mb-4">
-                            <i class="fas fa-trash text-danger fa-3x mb-3"></i>
-                            <h5>Are you sure you want to clear the chat history?</h5>
-                            <p class="text-muted">This action cannot be undone.</p>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" id="confirmClearChat">
-                            <i class="fas fa-trash me-2"></i>Clear Chat
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $(confirmModal).appendTo('body');
-    const modalEl = $('#clearChatModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-    
-    $('#confirmClearChat').click(function() {
-        modal.hide();
-        
-        // Show loading spinner
-        const loadingHtml = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary mb-3" role="status"></div>
-                <h5>Clearing conversation...</h5>
-            </div>
-        `;
-        $('#chat-messages').html(loadingHtml);
-        
+    if (confirm('Are you sure you want to clear the chat history? This cannot be undone.')) {
         $.get('{% url "clear_chat" book.id %}', function() {
-            // Clear session storage
-            if (window.sessionStorage) {
-                sessionStorage.removeItem(`book_{{ book.id }}_messages`);
-            }
-            
-            // Show welcome screen again with animation
-            const welcomeHtml = `
-                <div class="text-center py-5 welcome-animation" id="welcome-message">
-                    <div class="ai-avatar mb-3">
-                        <i class="fas fa-robot fa-4x text-primary"></i>
-                        <div class="pulse-ring"></div>
-                    </div>
-                    <h3 class="text-primary fw-bold mb-2">Chat Cleared!</h3>
-                    <p class="lead">Ready for a fresh start with "{{ book.title }}"</p>
-                    <div class="mt-4">
-                        <button class="btn btn-primary" onclick="insertSuggestion('Summarize this book')">
-                            <i class="fas fa-book-open me-2"></i>Get a Summary
-                        </button>
+            $('#chat-messages').html(`
+                <div class="text-center text-muted mt-5" id="welcome-message">
+                    <div class="mb-4">
+                        <i class="fas fa-robot fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
+                        <h4 class="text-primary">Chat Cleared!</h4>
+                        <p class="lead">Ready for a fresh start with "{{ book.title }}"</p>
                     </div>
                 </div>
-            `;
-            
-            $('#chat-messages').html(welcomeHtml);
-            
-            // Reset question counter
-            questionCount = 0;
-            updateQuestionCounter();
-        });
-        
-        modalEl.on('hidden.bs.modal', function() {
-            modalEl.remove();
-        });
-    });
-}
-
-// Add mobile TOC toggle button
-function addMobileTOCToggle() {
-    if ($(window).width() < 992) {
-        if ($('.toc-mobile-toggle').length === 0) {
-            $('body').append(`
-                <button class="toc-mobile-toggle" id="mobile-toc-toggle" 
-                        onclick="toggleMobileTOC()" aria-label="Toggle Table of Contents">
-                    <i class="fas fa-list-ul"></i>
-                </button>
             `);
-        }
-    } else {
-        $('.toc-mobile-toggle').remove();
+            questionCount = 0;
+            $('#question-counter').text('0 questions asked');
+        });
     }
 }
 
-// Function to toggle TOC visibility on mobile
-function toggleMobileTOC() {
-    const $tocCard = $('#toc-card');
-    
-    if ($tocCard.hasClass('mobile-visible')) {
-        $tocCard.removeClass('mobile-visible').hide();
-        $('#mobile-toc-toggle i').removeClass('fa-times').addClass('fa-list-ul');
-    } else {
-        $tocCard.addClass('mobile-visible').show();
-        $('#mobile-toc-toggle i').removeClass('fa-list-ul').addClass('fa-times');
-    }
+// Helper functions
+function rateResponse(type) {
+    // You can implement feedback collection here
+    console.log(`Response rated as: ${type}`);
 }
 
-// Update on window resize
-$(window).resize(function() {
-    addMobileTOCToggle();
-    
-    // Reset TOC visibility on resize
-    if ($(window).width() >= 992) {
-        $('#toc-card').show().removeClass('mobile-visible');
-    } else if (!$('#toc-card').hasClass('mobile-visible')) {
-        $('#toc-card').hide();
-    }
-});
+function copyToClipboard(button) {
+    const response = $(button).closest('.assistant-bubble').find('div[style*="white-space"]').text();
+    navigator.clipboard.writeText(response).then(() => {
+        $(button).html('<i class="fas fa-check text-success"></i>');
+        setTimeout(() => {
+            $(button).html('<i class="fas fa-copy"></i>');
+        }, 2000);
+    });
+}
 
-// Initialize mobile TOC on document ready
-$(document).ready(function() {
-    // Original $(document).ready code...
+// Save API Settings
+function saveAPISettings() {
+    const apiKey = $('#groq-api-key').val().trim();
+    const modelName = $('#model-select').val();
     
-    // Add mobile TOC functionality
-    addMobileTOCToggle();
-    if ($(window).width() < 992) {
-        $('#toc-card').hide();
-    }
-    
-    // Add swipe gestures for mobile
-    if ('ontouchstart' in window) {
-        let touchStartX = 0;
-        let touchEndX = 0;
-        
-        $(document).on('touchstart', function(e) {
-            touchStartX = e.originalEvent.touches[0].clientX;
-        });
-        
-        $(document).on('touchend', function(e) {
-            touchEndX = e.originalEvent.changedTouches[0].clientX;
-            handleSwipe();
-        });
-        
-        function handleSwipe() {
-            const swipeThreshold = 100;
-            
-            // Right swipe (open TOC)
-            if (touchEndX - touchStartX > swipeThreshold && $(window).width() < 992) {
-                $('#toc-card').addClass('mobile-visible').show();
-                $('#mobile-toc-toggle i').removeClass('fa-list-ul').addClass('fa-times');
+    $.ajax({
+        url: '{% url "update_api_settings" %}',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            groq_api_key: apiKey,
+            model_name: modelName,
+            book_id: {{ book.id }}
+        }),
+        success: function(response) {
+            if (response.status === 'success') {
+                // Close modal and show success message
+                $('#apiSettingsModal').modal('hide');
+                alert('API settings saved successfully!');
+            } else {
+                alert('Error: ' + response.message);
             }
-            
-            // Left swipe (close TOC)
-            if (touchStartX - touchEndX > swipeThreshold && $(window).width() < 992) {
-                $('#toc-card').removeClass('mobile-visible').hide();
-                $('#mobile-toc-toggle i').removeClass('fa-times').addClass('fa-list-ul');
-            }
+        },
+        error: function() {
+            alert('An error occurred while saving settings.');
         }
-    }
-});
+    });
+}
 
-// Function to insert question suggestions into the input field
-function insertSuggestion(text) {
-    // Set the value and trigger input event for auto-resize
-    $('#question-input').val(text).trigger('input').focus();
+// Toggle password visibility
+function togglePasswordVisibility() {
+    const passwordInput = $('#groq-api-key');
+    const icon = $('.toggle-password i');
     
-    // Animate the input to draw attention
-    $('#question-input').addClass('highlight-pulse');
-    setTimeout(() => $('#question-input').removeClass('highlight-pulse'), 500);
-    
-    // If on mobile, scroll to the question section
-    if ($(window).width() < 992) {
-        $('html, body').animate({
-            scrollTop: $('#question-section').offset().top - 70
-        }, 300);
-        
-        // Hide TOC if it's visible
-        if ($('#toc-card').hasClass('mobile-visible')) {
-            toggleMobileTOC();
-        }
+    if (passwordInput.attr('type') === 'password') {
+        passwordInput.attr('type', 'text');
+        icon.removeClass('fa-eye').addClass('fa-eye-slash');
+    } else {
+        passwordInput.attr('type', 'password');
+        icon.removeClass('fa-eye-slash').addClass('fa-eye');
     }
 }
 
-// Setup event handlers for improved input experience
+// Setup event handlers
 $(document).ready(function() {
-    // Auto-resize textarea function
-    function autoResizeTextarea(textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-    }
-    
-    // Apply textarea auto-resize
-    const questionInput = document.getElementById('question-input');
-    if (questionInput) {
-        questionInput.addEventListener('input', function() {
-            autoResizeTextarea(this);
-        });
-    }
-    
-    // Focus textarea when clicking on input container
-    $('.app-input-group').on('click', function() {
-        $('#question-input').focus();
+    // Auto-resize textarea
+    $('#question-input').on('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
     
-    // Keyboard shortcuts for sending messages
-    $('#question-input').on('keydown', function(e) {
+    // Enhanced keyboard shortcuts
+    $('#question-input').keydown(function(e) {
         if (e.which == 13 && !e.shiftKey) {
             e.preventDefault();
             askQuestion();
+        } else if (e.which == 13 && e.shiftKey) {
+            // Allow Shift+Enter for new line
+            return true;
         }
+    });
+    
+    // Add placeholder animations
+    let placeholders = [
+        "Ask me anything about this book...",
+        "What would you like to learn?",
+        "Type your question here...",
+        "How can I help you understand this chapter?",
+        "Ask for summaries, explanations, or examples..."
+    ];
+    let placeholderIndex = 0;
+    
+    setInterval(() => {
+        if (!$('#question-input').is(':focus') && $('#question-input').val() === '') {
+            $('#question-input').attr('placeholder', placeholders[placeholderIndex]);
+            placeholderIndex = (placeholderIndex + 1) % placeholders.length;
+        }
+    }, 3000);
+    
+    // API Settings event handlers
+    $('.toggle-password').click(togglePasswordVisibility);
+    $('#save-api-settings').click(saveAPISettings);
+    
+    // Add some welcome interactivity
+    setTimeout(() => {
+        if ($('#welcome-message').length > 0) {
+            $('#welcome-message').fadeIn('slow');
+        }
+    }, 500);
+    
+    // Add focus styling for better UX
+    $('#question-input').focus(function() {
+        $(this).parent().parent().addClass('shadow-lg');
+    }).blur(function() {
+        $(this).parent().parent().removeClass('shadow-lg');
     });
 });
 
-// Add TOC Section Functions
-// Function to toggle chapter sections in TOC
+// Enhanced TOC Functions
 function toggleTOCSection(event, toggleIcon) {
-    // Prevent default action (like following a link)
     event.preventDefault();
     event.stopPropagation();
     
-    // Get the parent list item element
-    const parentItem = $(toggleIcon).closest('a.toc-item');
+    const $icon = $(toggleIcon);
+    const $chapter = $icon.closest('.toc-chapter-group');
+    const $children = $chapter.find('.toc-children');
     
-    // Find the child section to toggle
-    const childrenSection = parentItem.next('.toc-children');
-    
-    // Toggle the visibility of children
-    if (childrenSection.length) {
-        childrenSection.collapse('toggle');
-        
-        // Toggle the icon
-        $(toggleIcon).toggleClass('fa-chevron-right fa-chevron-down');
-        
-        // Add subtle animation to parent item
-        parentItem.addClass('highlight-pulse');
-        setTimeout(() => parentItem.removeClass('highlight-pulse'), 300);
+    if ($children.hasClass('show')) {
+        $children.removeClass('show');
+        $icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        $children.addClass('show');
+        $icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
     }
 }
 
-// Function to expand all TOC sections
 function expandAllTOC() {
-    // Show all child sections
-    $('.toc-children').collapse('show');
-    
-    // Change all toggle icons to down arrows
+    $('.toc-children').addClass('show');
     $('.toc-toggle').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-    
-    // Visual feedback
-    $('#toc-list').addClass('highlight-pulse');
-    setTimeout(() => $('#toc-list').removeClass('highlight-pulse'), 300);
-    
-    // Add a small notification
-    const notification = $(`
-        <div class="alert alert-info alert-sm fade show py-1 px-2 mb-2" id="toc-notification">
-            <small><i class="fas fa-info-circle me-1"></i> All sections expanded</small>
-        </div>
-    `);
-    
-    // Show notification briefly
-    $('#toc-card .card-body').prepend(notification);
-    setTimeout(() => notification.fadeOut(function() { $(this).remove(); }), 2000);
 }
 
-// Function to collapse all TOC sections
 function collapseAllTOC() {
-    // Hide all child sections
-    $('.toc-children').collapse('hide');
-    
-    // Change all toggle icons to right arrows
+    $('.toc-children').removeClass('show');
     $('.toc-toggle').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-    
-    // Visual feedback
-    $('#toc-list').addClass('highlight-pulse');
-    setTimeout(() => $('#toc-list').removeClass('highlight-pulse'), 300);
-    
-    // Add a small notification
-    const notification = $(`
-        <div class="alert alert-info alert-sm fade show py-1 px-2 mb-2" id="toc-notification">
-            <small><i class="fas fa-info-circle me-1"></i> All sections collapsed</small>
-        </div>
-    `);
-    
-    // Show notification briefly
-    $('#toc-card .card-body').prepend(notification);
-    setTimeout(() => notification.fadeOut(function() { $(this).remove(); }), 2000);
 }
 
-// Function to filter TOC based on search input
-function filterTOC() {
-    const searchText = $('#toc-search').val().toLowerCase();
-    const $tocItems = $('.toc-item');
-    
-    // Show or hide clear button
-    if (searchText) {
-        $('#clear-search-btn').show();
-    } else {
-        $('#clear-search-btn').hide();
-    }
-    
-    if (searchText) {
-        // Search through TOC items
-        $tocItems.each(function() {
-            const $item = $(this);
-            const title = $item.data('title') || $item.text();
-            
-            if (title.toLowerCase().includes(searchText)) {
-                // Item matches search - show it
-                $item.show();
-                
-                // If this is a child, also show its parent container
-                if ($item.hasClass('toc-child')) {
-                    const $parentContainer = $item.closest('.toc-children');
-                    $parentContainer.collapse('show');
-                    
-                    // Update the toggle icon
-                    const $parentItem = $parentContainer.prev('.chapter-item');
-                    $parentItem.find('.toc-toggle').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                }
-            } else {
-                // Item doesn't match - hide it if it's not a parent of a match
-                const $childrenContainer = $item.next('.toc-children');
-                
-                if ($childrenContainer.length) {
-                    // This is a parent item - check if any children match
-                    const hasMatchingChild = $childrenContainer.find('.toc-child').filter(function() {
-                        const childTitle = $(this).data('title') || $(this).text();
-                        return childTitle.toLowerCase().includes(searchText);
-                    }).length > 0;
-                    
-                    if (hasMatchingChild) {
-                        // Show parent if any child matches
-                        $item.show();
-                        $childrenContainer.collapse('show');
-                        $item.find('.toc-toggle').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                    } else {
-                        $item.hide();
-                    }
-                } else {
-                    // Not a parent and doesn't match - hide it
-                    $item.hide();
-                }
-            }
-        });
-        
-        // Show a count of matches
-        const matchCount = $('.toc-item:visible').length;
-        $('#toc-stats').collapse('show');
-        
-    } else {
-        // No search text - show all items and collapse children
-        $tocItems.show();
-        $('.toc-children').collapse('hide');
-        $('.toc-toggle').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-        $('#toc-stats').collapse('hide');
-    }
-}
-
-// Function to clear TOC search
-function clearTOCSearch() {
-    $('#toc-search').val('');
-    filterTOC();
-    $('#toc-search').focus();
-}
-
-// Function to show TOC statistics
 function showTOCStats() {
     $('#tocStats').collapse('toggle');
 }
 
-// Function to copy AI response to clipboard
-function copyToClipboard(button) {
-    const messageContent = $(button).closest('.message-bubble').find('.message-content').text();
+function filterTOC() {
+    const searchTerm = $('#toc-search').val().toLowerCase();
+    const $tocItems = $('.toc-item');
     
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(messageContent)
-            .then(() => {
-                // Change button icon temporarily for visual feedback
-                const $icon = $(button).find('i');
-                $icon.removeClass('fa-copy').addClass('fa-check text-success');
-                
-                // Show success tooltip
-                const $tooltip = $(`
-                    <div class="copy-tooltip">Copied!</div>
-                `);
-                $(button).append($tooltip);
-                setTimeout(() => $tooltip.fadeOut(() => $tooltip.remove()), 1500);
-                
-                // Revert icon after a delay
-                setTimeout(() => $icon.removeClass('fa-check text-success').addClass('fa-copy'), 2000);
-            })
-            .catch(err => {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy to clipboard. Your browser may not support this feature.');
-            });
-    } else {
-        // Fallback for older browsers
-        try {
-            const textarea = document.createElement('textarea');
-            textarea.value = messageContent;
-            textarea.style.position = 'fixed';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
+    if (!searchTerm) {
+        $tocItems.show();
+        $('.toc-chapter-group').show();
+        return;
+    }
+    
+    $tocItems.each(function() {
+        const $item = $(this);
+        const title = $item.data('title') || $item.text();
+        
+        if (title.toLowerCase().includes(searchTerm)) {
+            $item.show();
+            $item.closest('.toc-chapter-group').show();
             
-            // Visual feedback
-            const $icon = $(button).find('i');
-            $icon.removeClass('fa-copy').addClass('fa-check text-success');
-            setTimeout(() => $icon.removeClass('fa-check text-success').addClass('fa-copy'), 2000);
-        } catch (err) {
-            console.error('Fallback copy failed: ', err);
-            alert('Failed to copy to clipboard. Please select and copy the text manually.');
+            // Also show parent if this is a child
+            if ($item.hasClass('toc-child')) {
+                $item.closest('.toc-children').addClass('show');
+                $item.closest('.toc-chapter-group').find('.toc-toggle')
+                     .removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            }
+        } else {
+            $item.hide();
         }
-    }
-}
-
-// Function to rate AI responses
-function rateResponse(rating, messageId) {
-    const messageContainer = $(event.target).closest('.message-container');
-    const messageId = messageContainer.attr('id');
+    });
     
-    // Visual feedback
-    const $buttonParent = $(event.target).closest('.message-actions');
-    const $thumbsUp = $buttonParent.find('button[onclick*="rateResponse(\'useful\'"]');
-    const $thumbsDown = $buttonParent.find('button[onclick*="rateResponse(\'not-useful\'"]');
-    
-    // Reset styling
-    $thumbsUp.removeClass('text-success').addClass('text-muted');
-    $thumbsDown.removeClass('text-danger').addClass('text-muted');
-    
-    // Apply appropriate styling based on rating
-    if (rating === 'useful') {
-        $thumbsUp.removeClass('text-muted').addClass('text-success');
-    } else {
-        $thumbsDown.removeClass('text-muted').addClass('text-danger');
-    }
-    
-    // Create a feedback form if it's not useful
-    if (rating === 'not-useful' && !messageContainer.find('.feedback-form').length) {
-        const feedbackForm = $(`
-            <div class="feedback-form mt-3">
-                <textarea class="form-control form-control-sm" 
-                          placeholder="How could this response be improved? (optional)" 
-                          rows="2"></textarea>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="submitFeedback('${messageId}')">
-                        Submit Feedback
-                    </button>
-                    <button class="btn btn-sm btn-link text-muted" onclick="cancelFeedback(this)">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        `);
-        messageContainer.append(feedbackForm);
-    }
-    
-    // Send rating to server
-    $.ajax({
-        url: '{% url "rate_response" %}',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            message_id: messageId,
-            rating: rating,
-            book_id: {{ book.id }}
-        }),
-        success: function(response) {
-            // Show temporary success message
-            const ratingMsg = $(`
-                <div class="rating-success small text-success mt-2 fade-out">
-                    <i class="fas fa-check-circle me-1"></i>
-                    Thank you for your feedback!
-                </div>
-            `);
-            
-            messageContainer.find('.message-bubble').append(ratingMsg);
-            
-            // Fade out after delay
-            setTimeout(() => ratingMsg.fadeOut(function() { $(this).remove(); }), 3000);
-        },
-        error: function() {
-            console.error('Failed to submit rating');
-        }
+    // Hide empty chapter groups
+    $('.toc-chapter-group').each(function() {
+        const $group = $(this);
+        const hasVisibleItems = $group.find('.toc-item:visible').length > 0;
+        $group.toggle(hasVisibleItems);
     });
 }
 
-// Helper functions for feedback
-function submitFeedback(messageId) {
-    const messageContainer = $(`#${messageId}`);
-    const feedbackText = messageContainer.find('.feedback-form textarea').val();
+function clearTOCSearch() {
+    $('#toc-search').val('');
+    filterTOC();
+}
+
+// Enhanced chapter selection with TOC integration
+function selectChapter(event, chapterId, chapterTitle) {
+    event.preventDefault();
     
-    // Send feedback to server
-    $.ajax({
-        url: '{% url "submit_feedback" %}',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            message_id: messageId,
-            feedback: feedbackText,
-            book_id: {{ book.id }}
-        }),
-        success: function() {
-            // Replace form with thank you message
-            messageContainer.find('.feedback-form').replaceWith(`
-                <div class="feedback-thanks text-success small mt-2">
-                    <i class="fas fa-check-circle me-1"></i>
-                    Thank you for your detailed feedback!
-                </div>
-            `);
-            
-            // Fade out after delay
-            setTimeout(() => messageContainer.find('.feedback-thanks').fadeOut(function() { 
-                $(this).remove(); 
-            }), 3000);
-        },
-        error: function() {
-            console.error('Failed to submit feedback');
-            alert('Failed to submit feedback. Please try again.');
+    // Update active state
+    $('.toc-item').removeClass('active');
+    $(event.target).closest('.toc-item').addClass('active');
+    
+    // Update chapter info
+    $('#current-chapter').text(chapterTitle);
+    
+    // Update chapter badge with additional info
+    const $selectedItem = $(event.target).closest('.toc-item');
+    const level = $selectedItem.data('level');
+    const startPage = $selectedItem.data('start-page');
+    const endPage = $selectedItem.data('end-page');
+    
+    let badgeText = 'General';
+    let badgeClass = 'bg-primary';
+    
+    if (chapterId) {
+        if (level > 1) {
+            badgeText = `Level ${level}`;
+            badgeClass = 'bg-info';
+        } else {
+            badgeText = 'Chapter';
+            badgeClass = 'bg-success';
         }
-    });
-}
-
-function cancelFeedback(button) {
-    // Remove the feedback form
-    $(button).closest('.feedback-form').remove();
-}
-
-// Add message function with improved visual styling
-function addMessage(content, sender, sources = null) {
-    const isUser = sender === 'user';
-    const messageId = 'msg-' + Date.now();
+        
+        if (startPage && endPage) {
+            badgeText += ` (p${startPage}-${endPage})`;
+        }
+    }
     
-    // Create base message container
-    const messageElement = $(`
-        <div class="message-container ${isUser ? 'user-message-container' : 'assistant-message-container'} mb-4" id="${messageId}">
-            <div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">
-                <div class="message-bubble ${isUser ? 'user-bubble' : 'assistant-bubble'} p-3">
-                    ${!isUser ? '<div class="assistant-icon"><i class="fas fa-robot"></i></div>' : ''}
-                    <div class="message-content"></div>
-                    ${!isUser ? `
-                        <div class="message-actions mt-2 text-end">
-                            <button class="btn btn-sm text-muted action-btn" onclick="copyToClipboard(this)" title="Copy to clipboard">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-sm text-muted action-btn" onclick="rateResponse('useful')" title="Mark as helpful">
-                                <i class="fas fa-thumbs-up"></i>
-                            </button>
-                            <button class="btn btn-sm text-muted action-btn" onclick="rateResponse('not-useful')" title="Mark as not helpful">
-                                <i class="fas fa-thumbs-down"></i>
-                            </button>
-                        </div>
-                    ` : ''}
-                </div>
-                ${isUser ? '<div class="user-icon"><i class="fas fa-user"></i></div>' : ''}
+    $('#chapter-badge').removeClass().addClass(`badge ${badgeClass}`).text(badgeText);
+    
+    // Clear chat and load questions for new chapter
+    $('#chat-messages').html(`
+        <div class="text-center text-muted mt-5">
+            <div class="mb-4">
+                <i class="fas fa-book-open fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
+                <h4 class="text-primary">Chapter Selected: ${chapterTitle}</h4>
+                <p class="lead">Ready to explore this section!</p>
             </div>
-            ${sources && sources.length > 0 ? `
-                <div class="sources-container">
-                    <button class="btn btn-sm btn-link sources-toggle" 
-                            onclick="toggleSources('${messageId}-sources')">
-                        <i class="fas fa-book me-1"></i> 
-                        Show ${sources.length} book reference${sources.length > 1 ? 's' : ''}
-                    </button>
-                    <div class="sources-list collapse" id="${messageId}-sources">
-                        <div class="card card-body mt-1 sources-card">
-                            <h6 class="sources-heading mb-2"><i class="fas fa-bookmark me-2"></i>Book References</h6>
-                            <ol class="mb-0 ps-3">
-                                ${sources.map(source => `
-                                    <li class="source-item">
-                                        <div class="source-title">${source.title || 'Chapter section'}</div>
-                                        ${source.start_page && source.end_page ? `
-                                            <div class="source-pages">
-                                                <span class="badge bg-light text-dark">Pages ${source.start_page}-${source.end_page}</span>
-                                            </div>
-                                        ` : ''}
-                                    </li>
-                                `).join('')}
-                            </ol>
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card border-0 bg-white shadow-sm">
+                        <div class="card-body p-3">
+                            <h6 class="card-title text-primary">
+                                <i class="fas fa-lightbulb me-1"></i>Chapter-Specific Features:
+                            </h6>
+                            <ul class="list-unstyled mb-0 text-start">
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Focused content analysis</li>
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Page-specific references</li>
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Contextual explanations</li>
+                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Related topic suggestions</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
-            ` : ''}
-        </div>
-    `);
-    
-    // Add to chat container
-    $('#chat-messages').append(messageElement);
-    
-    // Set content based on type
-    if (isUser) {
-        // User message - simple text
-        messageElement.find('.message-content').text(content);
-    } else {
-        // AI message - parse markdown and highlight references
-        const formattedContent = marked.parse(content);
-        messageElement.find('.message-content').html(formattedContent);
-        
-        // Syntax highlighting for code blocks
-        messageElement.find('pre code').each(function(i, block) {
-            hljs.highlightElement(block);
-        });
-    }
-    
-    // Scroll to bottom
-    scrollToBottom();
-}
-
-// Add dark mode toggle button to the page
-$(document).ready(function() {
-    // Add dark mode toggle button
-    $('body').append(`
-        <div class="dark-mode-toggle" onclick="toggleDarkMode()" id="dark-mode-toggle">
-            <i class="fas fa-moon"></i>
-        </div>
-    `);
-    
-    // Check for saved theme preference or system preference
-    const savedTheme = localStorage.getItem('book-ai-theme');
-    
-    if (savedTheme) {
-        // Apply saved preference
-        if (savedTheme === 'dark') {
-            enableDarkMode();
-        } else {
-            disableDarkMode();
-        }
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        // Apply system preference if no saved preference
-        enableDarkMode();
-    }
-});
-
-// Function to toggle dark mode
-function toggleDarkMode() {
-    if ($('html').hasClass('dark-theme')) {
-        disableDarkMode();
-        localStorage.setItem('book-ai-theme', 'light');
-    } else {
-        enableDarkMode();
-        localStorage.setItem('book-ai-theme', 'dark');
-    }
-}
-
-// Enable dark mode
-function enableDarkMode() {
-    $('html').addClass('dark-theme');
-    $('#dark-mode-toggle i').removeClass('fa-moon').addClass('fa-sun');
-    
-    // Show brief notification
-    showThemeToast('Dark mode enabled');
-}
-
-// Disable dark mode
-function disableDarkMode() {
-    $('html').removeClass('dark-theme');
-    $('#dark-mode-toggle i').removeClass('fa-sun').addClass('fa-moon');
-    
-    // Show brief notification
-    showThemeToast('Light mode enabled');
-}
-
-// Helper to show theme change notification
-function showThemeToast(message) {
-    // Remove any existing toast
-    $('.theme-toast').remove();
-    
-    // Create and append toast
-    const toast = $(`
-        <div class="theme-toast">
-            <div class="theme-toast-content">
-                <i class="fas ${message.includes('Dark') ? 'fa-moon' : 'fa-sun'} me-2"></i>
-                ${message}
             </div>
         </div>
     `);
     
-    $('body').append(toast);
+    questionCount = 0;
+    $('#question-counter').text('0 questions asked');
     
-    // Animate and remove
-    setTimeout(() => {
-        toast.addClass('show');
+    // Store current chapter
+    currentChapterId = chapterId;
+    
+    // Load frequent questions for this chapter
+    loadFrequentQuestions(chapterId);
+}
+
+// Add TOC-specific CSS styles
+$('<style>')
+    .prop('type', 'text/css')
+    .html(`
+        .toc-container {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+        }
         
-        setTimeout(() => {
-            toast.removeClass('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 1500);
-    }, 10);
-}
+        .toc-item {
+            border: none !important;
+            transition: all 0.3s ease;
+            margin: 2px 0;
+            border-radius: 6px !important;
+        }
+        
+        .toc-item:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .toc-item.active {
+            background: linear-gradient(135deg, #2196f3 0%, #9c27b0 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(33,150,243,0.3);
+        }
+        
+        .toc-item.active .text-muted {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        
+        .toc-toggle {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            color: #6c757d;
+        }
+        
+        .toc-toggle:hover {
+            color: #495057;
+            transform: scale(1.1);
+        }
+        
+        .toc-children {
+            background: rgba(0,0,0,0.02);
+            border-radius: 6px;
+            margin: 4px 0;
+        }
+        
+        .toc-child {
+            background: rgba(255,255,255,0.8) !important;
+            border-left: 3px solid #e9ecef !important;
+            margin: 1px 0 !important;
+        }
+        
+        .toc-child:hover {
+            border-left-color: #007bff !important;
+            background: rgba(0,123,255,0.1) !important;
+        }
+        
+        .toc-meta .badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+        }
+        
+        .toc-title {
+            font-weight: 500;
+            line-height: 1.2;
+        }
+        
+        .list-group-flush .list-group-item:first-child {
+            border-top: none;
+        }
+        
+        .list-group-flush .list-group-item:last-child {
+            border-bottom: none;
+        }
+        
+        #toc-search {
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        #toc-search:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        }
+        
+        .toc-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .toc-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .toc-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .toc-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    `)
+    .appendTo('head');
 
-/* Dark theme styles */
-.dark-theme {
-    --body-bg: #121212;
-    --card-bg: #1e1e1e;
-    --text-color: #e0e0e0;
-    --muted-color: #aaaaaa;
-    --border-color: #333333;
-    --chat-bg: #141414;
-    --input-bg: #2d2d2d;
-    --primary-color: #5c7cfa;
-    --user-bubble: #364fc7;
-    --ai-bubble: #2d3035;
-    --code-bg: #2c2c2c;
-}
-
-.dark-theme body,
-.dark-theme .app-container {
-    background-color: var(--body-bg);
-    color: var(--text-color);
-}
-
-.dark-theme .card,
-.dark-theme .modal-content {
-    background-color: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-.dark-theme .card-header,
-.dark-theme .modal-header,
-.dark-theme .modal-footer {
-    background-color: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-.dark-theme .text-muted {
-    color: var(--muted-color) !important;
-}
-
-.dark-theme .chat-container {
-    background-color: var(--chat-bg);
-}
-
-.dark-theme .toc-container,
-.dark-theme .list-group-item {
-    background-color: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-.dark-theme .app-input-group {
-    background-color: var(--input-bg);
-    border-color: var(--border-color);
-}
-
-.dark-theme .app-textarea {
-    color: var(--text-color);
-}
-
-.dark-theme .assistant-bubble {
-    background-color: var(--ai-bubble);
-    color: var(--text-color);
-}
-
-.dark-theme .user-bubble {
-    background-color: var(--user-bubble);
-}
-
-.dark-theme pre,
-.dark-theme code {
-    background-color: var(--code-bg);
-    border-color: var(--border-color);
-}
-
-.dark-theme .typing-indicator {
-    background-color: var(--ai-bubble);
-}
-
-.dark-theme .suggestion-pill {
-    background-color: var(--card-bg);
-    border-color: var(--border-color);
-    color: var(--primary-color);
-}
-
-/* Toast notification for theme change */
-.theme-toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 24px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 2000;
-    transition: transform 0.3s ease;
-}
-
-.theme-toast.show {
-    transform: translateX(-50%) translateY(0);
-}
-
-.theme-toast-content {
-    display: flex;
-    align-items: center;
-}
-</style>
+// Add CSS for suggestion badges
+$('<style>')
+    .prop('type', 'text/css')
+    .html(`
+        .suggestion-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .suggestion-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .is-invalid {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important;
+        }
+        .frequent-question {
+            transition: all 0.3s ease;
+        }
+        .message-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `)
+    .appendTo('head');
+</script>
 {% endblock extra_js %}
+{% endblock content %}
