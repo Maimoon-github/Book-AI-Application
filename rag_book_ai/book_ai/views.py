@@ -1,3 +1,185 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.conf import settings
+from django.http import JsonResponse, HttpResponse
+from .models import Book, BookChapter, Question
+import os
+import tempfile
+from .utils.pdf_processor import PDFProcessor
+from .utils.book_teaching_rag import BookTeachingRAG
+from django.views.decorators.csrf import csrf_exempt
+import json
 
-# Create your views here.
+def home(request):
+    books = Book.objects.all().order_by('-uploaded_at')
+    return render(request, 'book_ai/home.html', {'books': books})
+
+@csrf_exempt
+def upload_book(request):
+    if request.method == 'POST' and request.FILES.get('pdf_file'):
+        pdf_file = request.FILES['pdf_file']
+        
+        # Save the file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            for chunk in pdf_file.chunks():
+                tmp_file.write(chunk)
+            temp_file_path = tmp_file.name
+        
+        try:
+            # Process the PDF
+            processor = PDFProcessor(temp_file_path)
+            result = processor.process_pdf()
+            
+            if result:
+                # Create Book instance
+                book = Book.objects.create(
+                    title=result['filename'],
+                    file_path=temp_file_path,
+                    page_count=result['page_count']
+                )
+                
+                # Create BookChapter instances
+                for chunk in result['hierarchical_chunks']:
+                    chapter = BookChapter.objects.create(
+                        book=book,
+                        title=chunk['title'],
+                        level=chunk['level'],
+                        start_page=chunk['start_page'],
+                        end_page=chunk['end_page'],
+                        content=chunk['content'],
+                        parent_id=chunk.get('parent_id')
+                    )
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'book_id': book.id,
+                    'message': f'Successfully processed {book.title}'
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Failed to process PDF'
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+                
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request'
+    })
+
+def view_book(request, book_id):
+    book = Book.objects.get(id=book_id)
+    chapters = book.chapters.filter(parent=None).prefetch_related('children')
+    return render(request, 'book_ai/view_book.html', {
+        'book': book,
+        'chapters': chapters
+    })
+
+@csrf_exempt
+def ask_question(request, book_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        question = data.get('question')
+        chapter_id = data.get('chapter_id')
+        
+        book = Book.objects.get(id=book_id)
+        
+        # Initialize RAG system
+        rag = BookTeachingRAG()
+        
+        # Get chapter content if specified
+        chapter_filter = None
+        if chapter_id:
+            chapter = BookChapter.objects.get(id=chapter_id)
+            chapter_filter = chapter.title
+        
+        # Get previous messages from session
+        messages_history = request.session.get('teaching_messages', [])
+        
+        # Generate response
+        try:
+            groq_api_key = settings.GROQ_API_KEY  # You'll need to add this to settings.py
+            rag.setup_groq_model(groq_api_key)
+            
+            # Index book content if not already done
+            if 'book_indexed' not in request.session:
+                chapters = book.chapters.all()
+                book_chunks = [{
+                    'title': chapter.title,
+                    'level': chapter.level,
+                    'start_page': chapter.start_page,
+                    'end_page': chapter.end_page,
+                    'content': chapter.content
+                } for chapter in chapters]
+                rag.index_book_content(book_chunks)
+                request.session['book_indexed'] = True
+            
+            # Get response
+            response = rag.teach_topic(
+                question,
+                messages_history,
+                chapter_filter,
+                f"session_{request.session.session_key}"
+            )
+            
+            # Update messages history in session
+            messages_history.append({"role": "user", "content": question})
+            messages_history.append({
+                "role": "assistant",
+                "content": response["response"].content,
+                "sources": response["sources"]
+            })
+            request.session['teaching_messages'] = messages_history
+            
+            # Record question if chapter specified
+            if chapter_id:
+                question_obj, created = Question.objects.get_or_create(
+                    chapter_id=chapter_id,
+                    text=question,
+                    defaults={'frequency': 1}
+                )
+                if not created:
+                    question_obj.frequency += 1
+                    question_obj.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'response': response["response"].content,
+                'sources': response["sources"]
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request'
+    })
+
+def get_frequent_questions(request, chapter_id):
+    chapter = BookChapter.objects.get(id=chapter_id)
+    questions = chapter.questions.order_by('-frequency')[:5]
+    return JsonResponse({
+        'questions': [{
+            'text': q.text,
+            'frequency': q.frequency
+        } for q in questions]
+    })
+
+def clear_chat(request, book_id):
+    if 'teaching_messages' in request.session:
+        del request.session['teaching_messages']
+    return redirect('view_book', book_id=book_id)

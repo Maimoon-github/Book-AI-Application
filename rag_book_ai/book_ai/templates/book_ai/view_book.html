@@ -1,0 +1,193 @@
+{% extends 'book_ai/base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="text-muted">{{ book.page_count }} pages</p>
+                    
+                    <h6 class="mt-4">Chapters</h6>
+                    <div class="list-group">
+                        <a href="#" class="list-group-item list-group-item-action" 
+                           data-chapter-id="" onclick="selectChapter(event, '', 'All Chapters')">
+                            All Chapters
+                        </a>
+                        {% for chapter in chapters %}
+                            <a href="#" class="list-group-item list-group-item-action" 
+                               data-chapter-id="{{ chapter.id }}"
+                               onclick="selectChapter(event, {{ chapter.id }}, '{{ chapter.title }}')">
+                                {{ chapter.title }}
+                                {% if chapter.children.exists %}
+                                    <i class="fas fa-chevron-down float-end"></i>
+                                {% endif %}
+                            </a>
+                            {% for child in chapter.children.all %}
+                                <a href="#" class="list-group-item list-group-item-action ps-4"
+                                   data-chapter-id="{{ child.id }}"
+                                   onclick="selectChapter(event, {{ child.id }}, '{{ child.title }}')">
+                                    {{ child.title }}
+                                </a>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Frequent Questions -->
+                    <div id="frequent-questions" class="mt-4">
+                        <h6>Frequent Questions</h6>
+                        <div id="questions-list">
+                            <p class="text-muted">Select a chapter to see frequent questions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 id="current-chapter">All Chapters</h5>
+                        <button class="btn btn-outline-danger" onclick="clearChat()">
+                            <i class="fas fa-trash"></i> Clear Chat
+                        </button>
+                    </div>
+                    
+                    <!-- Chat Area -->
+                    <div id="chat-messages" class="mb-3" style="height: 500px; overflow-y: auto;">
+                        <!-- Messages will be added here -->
+                    </div>
+                    
+                    <!-- Input Area -->
+                    <div class="input-group">
+                        <input type="text" id="question-input" class="form-control" 
+                               placeholder="Ask a question about the book...">
+                        <button class="btn btn-primary" onclick="askQuestion()">
+                            <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+let currentChapterId = '';
+let currentChapterTitle = 'All Chapters';
+
+function selectChapter(event, chapterId, chapterTitle) {
+    event.preventDefault();
+    currentChapterId = chapterId;
+    currentChapterTitle = chapterTitle;
+    
+    // Update UI
+    $('#current-chapter').text(chapterTitle);
+    $('.list-group-item').removeClass('active');
+    $(event.target).addClass('active');
+    
+    // Load frequent questions
+    if (chapterId) {
+        loadFrequentQuestions(chapterId);
+    } else {
+        $('#questions-list').html('<p class="text-muted">Select a chapter to see frequent questions.</p>');
+    }
+}
+
+function loadFrequentQuestions(chapterId) {
+    $.get(`/chapter/${chapterId}/frequent-questions/`, function(response) {
+        let html = '';
+        if (response.questions.length > 0) {
+            response.questions.forEach(q => {
+                html += `
+                    <div class="frequent-question p-2 mb-1 rounded" onclick="askFrequentQuestion('${q.text}')">
+                        <small class="text-muted">${q.frequency}×</small>
+                        ${q.text}
+                    </div>`;
+            });
+        } else {
+            html = '<p class="text-muted">No questions asked about this chapter yet.</p>';
+        }
+        $('#questions-list').html(html);
+    });
+}
+
+function askFrequentQuestion(question) {
+    $('#question-input').val(question);
+    askQuestion();
+}
+
+function addMessage(content, role, sources = null) {
+    const messageDiv = $('<div>').addClass(`chat-message ${role}-message`);
+    messageDiv.html(`<p>${content}</p>`);
+    
+    if (sources && sources.length > 0) {
+        const sourcesList = $('<div>').addClass('sources-list mt-2');
+        sourcesList.html('<strong>Sources:</strong><ul>' + 
+            sources.map(s => `<li>${s}</li>`).join('') + '</ul>');
+        messageDiv.append(sourcesList);
+    }
+    
+    $('#chat-messages').append(messageDiv);
+    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+}
+
+function askQuestion() {
+    const question = $('#question-input').val().trim();
+    if (!question) return;
+    
+    // Add user message
+    addMessage(question, 'user');
+    $('#question-input').val('');
+    
+    // Send request
+    $.ajax({
+        url: '{% url "ask_question" book.id %}',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            question: question,
+            chapter_id: currentChapterId
+        }),
+        success: function(response) {
+            if (response.status === 'success') {
+                addMessage(response.response, 'assistant', response.sources);
+                
+                // Reload frequent questions if in a chapter
+                if (currentChapterId) {
+                    loadFrequentQuestions(currentChapterId);
+                }
+            } else {
+                addMessage('Error: ' + response.message, 'assistant');
+            }
+        },
+        error: function() {
+            addMessage('Sorry, something went wrong. Please try again.', 'assistant');
+        }
+    });
+}
+
+function clearChat() {
+    if (confirm('Are you sure you want to clear the chat history?')) {
+        $.get('{% url "clear_chat" book.id %}', function() {
+            $('#chat-messages').empty();
+        });
+    }
+}
+
+// Setup event handlers
+$(document).ready(function() {
+    $('#question-input').keypress(function(e) {
+        if (e.which == 13) {
+            askQuestion();
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

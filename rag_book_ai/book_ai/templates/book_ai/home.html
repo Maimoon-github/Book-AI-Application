@@ -1,0 +1,94 @@
+{% extends 'book_ai/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>📚 Book AI Teaching Assistant</h1>
+    
+    <!-- Upload Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Upload a Book</h5>
+            <form id="upload-form" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <input type="file" class="form-control" name="pdf_file" accept=".pdf" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload PDF</button>
+            </form>
+            <div id="upload-progress" class="progress mt-3 d-none">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Book List -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Your Books</h5>
+            {% if books %}
+                <div class="list-group">
+                    {% for book in books %}
+                        <a href="{% url 'view_book' book.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ book.title }}</h5>
+                                <small>{{ book.uploaded_at|date:"M d, Y" }}</small>
+                            </div>
+                            <p class="mb-1">{{ book.page_count }} pages</p>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No books uploaded yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#upload-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var formData = new FormData(form[0]);
+        
+        // Show progress bar
+        $('#upload-progress').removeClass('d-none');
+        
+        $.ajax({
+            url: '{% url "upload_book" %}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            xhr: function() {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function(evt) {
+                    if (evt.lengthComputable) {
+                        var percentComplete = evt.loaded / evt.total;
+                        $('.progress-bar').css('width', percentComplete * 100 + '%');
+                    }
+                }, false);
+                return xhr;
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    window.location.href = '/book/' + response.book_id + '/';
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Upload failed. Please try again.');
+            },
+            complete: function() {
+                $('#upload-progress').addClass('d-none');
+                $('.progress-bar').css('width', '0%');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

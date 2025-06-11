@@ -1,0 +1,10 @@
+django>=4.2
+langchain-groq>=0.0.3
+chromadb>=0.4.22
+sentence-transformers>=2.3.1
+PyMuPDF>=1.23.8
+pandas>=2.1.4
+numpy>=1.26.3
+langgraph>=0.0.11
+langchain-core>=0.1.13
+typing-extensions>=4.9.0
