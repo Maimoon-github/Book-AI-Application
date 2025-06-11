@@ -73,118 +73,43 @@ def get_frequent_questions(chapter: str, limit: int = 3) -> list:
     # Return top questions with their frequencies
     return [(q, freq) for q, freq in sorted_questions[:limit]]
 
-def generate_suggested_questions(chunk_content: str) -> list:
-    """Generate suggested questions based on chapter content analysis"""
-    # Extract potential keywords and topics from content
-    content_lower = chunk_content.lower()
-    words = content_lower.split()
-    
-    # Enhanced set of stop words to filter out common words
-    stop_words = {
-        'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 
-        'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had',
-        'this', 'that', 'these', 'those', 'such', 'what', 'which', 'who',
-        'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few',
-        'more', 'most', 'some', 'such', 'than', 'too', 'very', 'can', 'will',
-        'just', 'should', 'now', 'also', 'may', 'chapter', 'book', 'section'
-    }
-    
-    # Extract meaningful words (more than 4 chars, not in stop words)
-    meaningful_words = [word for word in words 
-                        if len(word) > 4 and word not in stop_words]
-    
-    # Count word frequency
-    word_freq = {}
-    for word in meaningful_words:
-        if word.isalnum():  # Only consider alphanumeric words
-            word_freq[word] = word_freq.get(word, 0) + 1
-    
-    # Extract multi-word phrases (2-3 words)
-    phrases = []
-    sentences = [s.strip() for s in content_lower.split('.') if len(s.strip()) > 20]
-    for sentence in sentences:
-        words = sentence.split()
-        for i in range(len(words) - 1):
-            if (words[i] not in stop_words and 
-                words[i+1] not in stop_words and
-                len(words[i]) > 3 and len(words[i+1]) > 3):
-                phrase = f"{words[i]} {words[i+1]}"
-                phrases.append(phrase)
-    
-    # Count phrase frequencies
-    phrase_freq = {}
-    for phrase in phrases:
-        phrase_freq[phrase] = phrase_freq.get(phrase, 0) + 1
+def display_frequent_questions_sidebar(chapter_titles, selected_chapter=None):
+    """Display frequent questions in the sidebar for easy access"""
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### 📚 Frequent Questions")
         
-    # Get top words and phrases
-    top_words = sorted([(w, f) for w, f in word_freq.items() if f >= 3], 
-                      key=lambda x: x[1], 
-                      reverse=True)[:5]
-    
-    top_phrases = sorted(phrase_freq.items(), key=lambda x: x[1], reverse=True)[:3]
-    
-    suggested_questions = []
-    
-    # Add fundamental understanding questions
-    suggested_questions.append("What are the main concepts covered in this chapter?")
-    suggested_questions.append("Can you summarize the key points of this chapter?")
-    
-    # Add questions based on important individual words
-    for word, _ in top_words:
-        suggested_questions.append(f"What does '{word}' mean in the context of this chapter?")
-        suggested_questions.append(f"Why is '{word}' important to understand here?")
-    
-    # Add questions based on important phrases
-    for phrase, _ in top_phrases:
-        suggested_questions.append(f"Can you explain the concept of '{phrase}'?")
-        
-    # Add analytical and application questions
-    suggested_questions.extend([
-        "How does this chapter connect to real-world applications?",
-        "What are common misconceptions about these topics?",
-        "How would you apply these concepts in practice?",
-        "What are the most challenging aspects to understand in this material?"
-    ])
-    
-    # Remove any duplicates and limit the number of questions
-    unique_questions = list(dict.fromkeys(suggested_questions))
-    return unique_questions[:8]  # Return top 8 most relevant questions
-
-def display_frequent_questions(chapter: str):
-    """Display frequent questions and suggested questions for a chapter with interactive elements"""
-    st.markdown("#### 💭 Questions About This Chapter")
-    
-    # Find the chapter content for generating suggested questions
-    chunk = next((c for c in st.session_state.get('current_chunks', []) 
-                 if c['title'] == chapter), None)
-    
-    if not chunk:
-        st.warning(f"Couldn't find content for chapter: {chapter}")
-        return
-        
-    # Create two columns for different types of questions
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("**🔄 Frequently Asked Questions:**")
-        questions = get_frequent_questions(chapter)
-        if questions:
-            for question, freq in questions:
-                if st.button(f"🔍 {question}", key=f"faq_{hash(question)}"):
-                    st.session_state.preset_question = question
-                    st.rerun()
-                st.caption(f"Asked {freq} times")
+        if not selected_chapter or selected_chapter == "All Chapters":
+            # Show questions from all chapters
+            all_questions = []
+            for chapter in chapter_titles:
+                chapter_questions = get_frequent_questions(chapter, limit=2)
+                for question, freq in chapter_questions:
+                    all_questions.append((chapter, question, freq))
+            
+            # Sort by frequency across all chapters
+            all_questions.sort(key=lambda x: x[2], reverse=True)
+            
+            if all_questions:
+                for chapter, question, freq in all_questions[:5]:  # Show top 5
+                    if st.button(f"🔍 {question[:50]}...", key=f"sidebar_{hash(question)}"):
+                        st.session_state.preset_question = question
+                        st.rerun()
+                    st.caption(f"From: {chapter} (asked {freq} times)")
+            else:
+                st.info("No frequently asked questions yet.")
         else:
-            st.info("No questions have been asked about this chapter yet.")
-    
-    with col2:
-        st.markdown("**💡 Suggested Questions:**")
-        # Generate content-aware questions based on the chapter content
-        suggested = generate_suggested_questions(chunk['content'])
-        for q in suggested:
-            if st.button(f"💭 {q}", key=f"suggest_{hash(q)}"):
-                st.session_state.preset_question = q
-                st.rerun()
+            # Show questions from selected chapter
+            questions = get_frequent_questions(selected_chapter)
+            if questions:
+                st.markdown(f"**From: {selected_chapter}**")
+                for question, freq in questions:
+                    if st.button(f"🔍 {question}", key=f"sidebar_{hash(question)}"):
+                        st.session_state.preset_question = question
+                        st.rerun()
+                    st.caption(f"Asked {freq} times")
+            else:
+                st.info(f"No questions asked about {selected_chapter} yet.")
 
 class BookTeachingRAG:
     def __init__(self):
@@ -792,11 +717,6 @@ def create_teaching_interface(result, api_key):
             "Focus on chapter (optional):",
             ["All Chapters"] + chapter_titles
         )
-        
-        # Display questions for selected chapter
-        if selected_chapter != "All Chapters":
-            st.markdown("---")
-            display_frequent_questions(selected_chapter)
     
     # Setup Groq model if not already done
     if not st.session_state.rag_system.groq_model:
@@ -859,19 +779,22 @@ def create_teaching_interface(result, api_key):
         # Generate AI response
         with st.chat_message("assistant"):
             with st.spinner("Teaching..."):
-                # Convert messages to LangChain format
-                lc_messages = []
-                for msg in st.session_state.teaching_messages[:-1]:  # Exclude the current user message
-                    if msg["role"] == "user":
-                        lc_messages.append(HumanMessage(content=msg["content"]))
-                    else:
-                        lc_messages.append(AIMessage(content=msg["content"]))
-                
                 try:
+                    # Convert messages to LangChain format
+                    lc_messages = []
+                    for msg in st.session_state.teaching_messages[:-1]:  # Exclude the current user message
+                        if msg["role"] == "user":
+                            lc_messages.append(HumanMessage(content=msg["content"]))
+                        else:
+                            lc_messages.append(AIMessage(content=msg["content"]))
+                    
+                    # Set chapter filter based on selected chapter
+                    chapter_filter = selected_chapter if selected_chapter != "All Chapters" else None
+                    
                     response = st.session_state.rag_system.teach_topic(
                         prompt, 
                         lc_messages, 
-                        chapter_filter,
+                        chapter_filter,  # Now properly defined
                         st.session_state.thread_id
                     )
                     
