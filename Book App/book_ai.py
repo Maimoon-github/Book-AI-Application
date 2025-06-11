@@ -5,16 +5,14 @@ import tempfile
 import warnings
 from typing import List, Dict, Tuple, Optional, Any, Sequence
 import pandas as pd
+import fitz  # PyMuPDF
 
 # Suppress specific PyTorch warnings that are harmless in Streamlit context
 warnings.filterwarnings("ignore", message=".*torch.classes.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")
 os.environ["PYTORCH_DISABLE_VERSION_CHECK"] = "1"
 
-# Import PyMuPDF first
-import fitz  # PyMuPDF
-
-# RAG and AI imports - we'll defer actual model loading using st.cache_resource
+# RAG and AI imports - avoid direct initialization
 import chromadb
 from typing_extensions import Annotated, TypedDict
 
@@ -26,7 +24,6 @@ try:
     from langgraph.graph import START, StateGraph
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.graph.message import add_messages
-    # Don't import SentenceTransformer globally - we'll load it only when needed
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
@@ -40,28 +37,142 @@ SUPPORTED_MODELS = [
     "mixtral-8x7b-32768"
 ]
 
-# Cache the embedding model to prevent reloading
+# Use Streamlit's caching for PyTorch models to avoid reinitialization
 @st.cache_resource
-def load_embedding_model(model_name='all-MiniLM-L6-v2'):
-    """Load the sentence transformer model with caching to avoid reinitialization"""
+def get_sentence_transformer(model_name='all-MiniLM-L6-v2'):
+    """Load sentence transformer with proper caching to avoid conflicts with Streamlit"""
     from sentence_transformers import SentenceTransformer
     return SentenceTransformer(model_name)
+
+# Question tracking with session state
+def initialize_question_tracking():
+    """Initialize the question tracking system in session state"""
+    if 'chapter_questions' not in st.session_state:
+        st.session_state.chapter_questions = {}
+
+def record_question(chapter: str, question: str):
+    """Record a question for a specific chapter"""
+    if chapter not in st.session_state.chapter_questions:
+        st.session_state.chapter_questions[chapter] = {}
+    
+    # Increment question count
+    if question in st.session_state.chapter_questions[chapter]:
+        st.session_state.chapter_questions[chapter][question] += 1
+    else:
+        st.session_state.chapter_questions[chapter][question] = 1
+
+def get_frequent_questions(chapter: str, limit: int = 3) -> list:
+    """Get the most frequently asked questions for a chapter"""
+    if chapter not in st.session_state.chapter_questions:
+        return []
+    
+    # Sort questions by frequency
+    questions = st.session_state.chapter_questions[chapter].items()
+    sorted_questions = sorted(questions, key=lambda x: x[1], reverse=True)
+    
+    # Return top questions with their frequencies
+    return [(q, freq) for q, freq in sorted_questions[:limit]]
+
+def generate_suggested_questions(chunk_content: str) -> list:
+    """Generate suggested questions based on chapter content analysis"""
+    # Extract potential keywords and topics from content
+    content_lower = chunk_content.lower()
+    words = content_lower.split()
+    
+    # Basic question templates
+    templates = [
+        "What is the significance of {topic} in this chapter?",
+        "How does {topic} relate to {other_topic}?",
+        "Can you explain the concept of {topic} in simple terms?",
+        "What are the practical applications of {topic}?",
+        "Why is {topic} important in this context?"
+    ]
+    
+    # Common academic/technical words to ignore
+    stop_words = {'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with'}
+    
+    # Find potential topics (words that appear multiple times)
+    word_freq = {}
+    for word in words:
+        if (len(word) > 4 and  # Ignore short words
+            word not in stop_words and
+            word.isalnum()):  # Only consider alphanumeric words
+            word_freq[word] = word_freq.get(word, 0) + 1
+    
+    # Get most frequent meaningful words as topics
+    topics = sorted([(w, f) for w, f in word_freq.items() if f >= 2], 
+                   key=lambda x: x[1], 
+                   reverse=True)[:5]
+    
+    suggested_questions = []
+    
+    # Always add these fundamental questions
+    suggested_questions.extend([
+        "What are the main concepts covered in this chapter?",
+        "Can you summarize the key points of this chapter?",
+    ])
+    
+    # Generate contextual questions based on identified topics
+    if topics:
+        for topic, _ in topics:
+            # Add topic-specific questions
+            suggested_questions.append(f"What is the role of {topic} discussed in this chapter?")
+            
+            # Find related topics for comparison questions
+            related_topics = [t for t, _ in topics if t != topic][:2]
+            if related_topics:
+                suggested_questions.append(
+                    f"How does {topic} relate to {related_topics[0]}?")
+    
+    # Add some analytical questions
+    suggested_questions.extend([
+        "What are the practical implications of these concepts?",
+        "How does this chapter connect to real-world applications?",
+        "What are common challenges or misconceptions about these topics?"
+    ])
+    
+    return suggested_questions[:8]  # Limit to top 8 most relevant questions
+
+def display_frequent_questions(chapter: str):
+    """Display frequent questions and suggested questions for a chapter with interactive elements"""
+    st.markdown("#### 💭 Questions About This Chapter")
+    
+    # Create two columns for different types of questions
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🔄 Frequently Asked Questions:**")
+        questions = get_frequent_questions(chapter)
+        if questions:
+            for question, freq in questions:
+                if st.button(f"🔍 {question}", key=f"faq_{hash(question)}"):
+                    st.session_state.preset_question = question
+                    st.rerun()
+                st.caption(f"Asked {freq} times")
+        else:
+            st.info("No questions have been asked about this chapter yet.")
+    
+    with col2:
+        st.markdown("**💡 Suggested Questions:**")
+        # Find the chapter content
+        chunk = next((c for c in st.session_state.get('current_chunks', []) 
+                     if c['title'] == chapter), None)
+        if chunk:
+            suggested = generate_suggested_questions(chunk['content'])
+            for q in suggested:
+                if st.button(f"💭 {q}", key=f"suggest_{hash(q)}"):
+                    st.session_state.preset_question = q
+                    st.rerun()
 
 class BookTeachingRAG:
     def __init__(self):
         self.chroma_client = chromadb.Client()
         self.collection = None
-        # Don't initialize the embedding model here - we'll do it lazily when needed
+        # Don't initialize the embedding model directly here
         self.embedding_model = None
         self.groq_model = None
         self.app = None
     
-    def get_embedding_model(self):
-        """Lazily load the embedding model only when needed"""
-        if self.embedding_model is None:
-            self.embedding_model = load_embedding_model()
-        return self.embedding_model
-        
     def setup_groq_model(self, api_key, model_name="llama-3.3-70b-versatile"):
         """Initialize Groq model for teaching responses"""
         self.groq_model = ChatGroq(
@@ -74,74 +185,58 @@ class BookTeachingRAG:
     def _initialize_workflow(self):
         """Set up LangGraph workflow for teaching conversations"""
         teaching_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert AI teacher specializing in adaptive learning from books. Your teaching follows a structured pedagogical approach.
+            ("system", """I want you to act as an expert tutor and write a "chapter" on the topic I specify. Use very clear, simple language so a beginner can follow. Structure your response as follows:
 
-## Teaching Philosophy & Pattern:
+1. Title and Introduction
+   - Give a short, friendly chapter title.
+   - Explain in a sentence why this topic matters or how it can help the learner.
 
-### 🎯 **Learning Objective Identification**
-- First understand what the student wants to learn
-- Identify their current knowledge level
-- Set clear, achievable learning goals
+2. Learning Objectives
+   - List 3–5 things the learner will understand or be able to do after reading.
 
-### 📚 **Structured Teaching Pattern**
-When teaching any concept, follow this pattern:
+3. Background & Context
+   - Briefly describe where this topic fits in the bigger picture.
+   - Define any basic terms or ideas the learner needs to know first.
 
-1. **FOUNDATION** 🏗️
-   - Start with core definitions and basic concepts
-   - Provide clear, simple explanations
-   - Use analogies from everyday life
+4. Key Concepts (Broken into Sections)
+   - Divide the topic into logical sections or steps.
+   - For each section:
+     • Give a clear heading.
+     • Explain the core idea in simple words.
+     • Show a concrete example or analogy.
+     • If useful, suggest a simple "visual" (e.g., "imagine …") or a mental picture.
 
-2. **CONTEXT** 🌍
-   - Explain where this fits in the bigger picture
-   - Connect to previously learned material
-   - Show relevance and importance
+5. Step-by-Step Explanations or Process
+   - If the topic involves procedures or stages, list them one by one.
+   - Explain each stage simply, why it matters, and what to watch out for.
 
-3. **EXAMPLES** 💡
-   - Provide concrete, relatable examples
-   - Use case studies from the book content
-   - Show practical applications
+6. Real-World Applications or Use Cases
+   - Describe 1–2 simple scenarios where this knowledge applies.
+   - Show how it could be used in everyday life or a project.
 
-4. **ANALYSIS** 🔍
-   - Break down complex ideas into components
-   - Explain cause-and-effect relationships
-   - Highlight patterns and principles
+7. Common Mistakes or FAQs
+   - Point out pitfalls or misunderstandings beginners often have.
+   - Provide short Q&A: e.g., "Q: Is X always true? A: Not always, because…"
 
-5. **APPLICATION** 🚀
-   - Suggest how to apply this knowledge
-   - Provide practice scenarios
-   - Connect to real-world situations
+8. Summary
+   - Restate the main points in a few bullet lines.
+   - Remind the learner what they should now understand or do.
 
-6. **REINFORCEMENT** 🎯
-   - Summarize key takeaways
-   - Suggest follow-up questions for deeper learning
-   - Recommend related topics to explore
+9. Practice or Reflection
+   - Give 1–3 simple exercises, thought questions, or small tasks to try.
+   - Encourage the learner to reflect: "How would you apply this? What challenges might arise?"
 
-### 💬 **Communication Style**
-- **Clarity**: Use simple, clear language
-- **Engagement**: Ask thought-provoking questions
-- **Encouragement**: Maintain positive, supportive tone
-- **Adaptation**: Adjust complexity based on student responses
-- **Source-Grounded**: Always reference the book content
+10. Further Resources (Optional)
+   - Suggest 1–3 next steps: keywords to search, book chapters, tutorials, or simple tools to explore.
 
-### 🔄 **Interactive Learning**
-- Ask "Do you understand?" or "What would you like to explore further?"
-- Encourage questions and clarification requests
-- Provide multiple perspectives on complex topics
-- Use Socratic method when appropriate
+Tone guidelines:
+- Use everyday words; avoid jargon or explain it immediately.
+- Write in an encouraging, patient style ("You can try this step…", "It's normal to wonder about…").
+- Use short paragraphs and bullet lists to keep it easy to scan.
+- Offer analogies or stories when they help make a point memorable.
+- Keep each section focused; don't overload with too many ideas at once.
 
-### 📖 **Content Integration**
-- Always ground explanations in the provided book context
-- Reference specific chapters and page numbers
-- Quote relevant passages when helpful
-- Maintain fidelity to the author's intent
-
-### 🎓 **Assessment & Progress**
-- Check understanding with gentle questioning
-- Provide positive reinforcement for engagement
-- Suggest next steps in the learning journey
-- Identify knowledge gaps and address them
-
-Remember: You are not just answering questions - you are facilitating deep, meaningful learning experiences based on the book's content."""),
+Remember to always base your teaching on the book content. Use specific examples, ideas, and explanations from the book when creating your chapters."""),
             MessagesPlaceholder(variable_name="messages"),
         ])
         
@@ -163,6 +258,11 @@ Remember: You are not just answering questions - you are facilitating deep, mean
                 last_msg = messages_with_context[-1]
                 enhanced_content = f"{context_message}\nSTUDENT QUESTION: {last_msg.content}"
                 messages_with_context[-1] = HumanMessage(content=enhanced_content)
+            
+            # Record the question for frequency tracking if it's related to a specific chapter
+            chapter = state.get('chapter')
+            if chapter and isinstance(messages_with_context[-1], HumanMessage):
+                record_question(chapter, messages_with_context[-1].content)
             
             prompt = teaching_prompt.invoke({"messages": messages_with_context})
             response = self.groq_model.invoke(prompt)
@@ -191,11 +291,12 @@ Remember: You are not just answering questions - you are facilitating deep, mean
         metadatas = []
         ids = []
         
-        # Get the embedding model only when needed
-        embedding_model = self.get_embedding_model()
-        
+        # Get the embedding model using the cached function
+        if self.embedding_model is None:
+            self.embedding_model = get_sentence_transformer()
+            
         for i, chunk in enumerate(rag_chunks):
-            embedding = embedding_model.encode(chunk['text'])
+            embedding = self.embedding_model.encode(chunk['text'])
             
             documents.append(chunk['text'])
             embeddings.append(embedding.tolist())
@@ -249,10 +350,12 @@ Remember: You are not just answering questions - you are facilitating deep, mean
         """Retrieve most relevant chunks for the query"""
         if not self.collection:
             return {"documents": [[]], "metadatas": [[]]}
-        
-        # Get the embedding model only when needed
-        embedding_model = self.get_embedding_model()
-        query_embedding = embedding_model.encode(query)
+            
+        # Ensure model is loaded through the cached function
+        if self.embedding_model is None:
+            self.embedding_model = get_sentence_transformer()
+            
+        query_embedding = self.embedding_model.encode(query)
         
         where_clause = None
         if chapter_filter:
@@ -618,22 +721,31 @@ def create_teaching_interface(result, api_key):
     """Create interactive teaching interface with LangGraph"""
     st.subheader("🤖 AI Teacher - Ask Questions About Your Book")
     
+    # Initialize question tracking
+    initialize_question_tracking()
+    
     if not RAG_AVAILABLE:
         st.error("RAG features are not available. Please install required packages.")
         st.code("pip install langchain-groq langgraph sentence-transformers chromadb")
         return
     
-    # Initialize RAG system
+    # Initialize RAG system with proper caching to avoid PyTorch conflicts
     if 'rag_system' not in st.session_state:
         with st.spinner("Setting up AI teacher..."):
             try:
-                st.session_state.rag_system = BookTeachingRAG()
-                # We now index the book content with proper error handling for PyTorch models
-                st.session_state.rag_system.index_book_content(result['chunks'])
+                # Initialize the BookTeachingRAG system
+                rag_system = BookTeachingRAG()
+                # Add to session state before any PyTorch operations
+                st.session_state.rag_system = rag_system
+                # Now index content - PyTorch operations will happen inside the cached function
+                rag_system.index_book_content(result['chunks'])
                 st.success("AI Teacher initialized! 🎓")
             except Exception as e:
                 st.error(f"Failed to initialize AI teacher: {str(e)}")
                 return
+    
+    # Store chunks in session state for access by other functions
+    st.session_state.current_chunks = result['chunks']
     
     # Model configuration
     col1, col2 = st.columns(2)
@@ -650,6 +762,11 @@ def create_teaching_interface(result, api_key):
             "Focus on chapter (optional):",
             ["All Chapters"] + chapter_titles
         )
+        
+        # Display questions for selected chapter
+        if selected_chapter != "All Chapters":
+            st.markdown("---")
+            display_frequent_questions(selected_chapter)
     
     # Setup Groq model if not already done
     if not st.session_state.rag_system.groq_model:
@@ -687,8 +804,16 @@ def create_teaching_interface(result, api_key):
                     for source in message["sources"]:
                         st.write(f"• {source}")
     
-    # Chat input
-    if prompt := st.chat_input("Ask me anything about this book..."):
+    # Check if there's a preset question to ask
+    preset_question = st.session_state.get('preset_question', None)
+    if preset_question:
+        prompt = preset_question
+        # Clear the preset question
+        del st.session_state.preset_question
+    else:
+        prompt = st.chat_input("Ask me anything about this book...")
+    
+    if prompt:
         # Add user message
         st.session_state.teaching_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
