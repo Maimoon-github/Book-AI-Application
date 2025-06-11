@@ -1,85 +1,239 @@
 {% extends 'book_ai/base.html' %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>📚 Book AI Teaching Assistant</h1>
-      <!-- API Key Settings -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">AI Settings</h5>
-            <form id="api-settings-form">
-                <div class="mb-3">
-                    <label for="groq-api-key" class="form-label">Groq API Key</label>
-                    <div class="input-group">
-                        <input type="password" class="form-control" id="groq-api-key" name="groq_api_key" 
-                               placeholder="Enter your Groq API key" value="{{ groq_api_key }}">
-                        <button class="btn btn-outline-secondary toggle-password" type="button">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <small class="text-muted">Get a free API key from <a href="https://console.groq.com/" target="_blank">console.groq.com</a></small>
-                </div>
-                <div class="mb-3">
-                    <label for="model-select" class="form-label">AI Model</label>
-                    <select class="form-select" id="model-select" name="model_name">
-                        <option value="llama-3.3-70b-versatile" {% if preferred_model == "llama-3.3-70b-versatile" %}selected{% endif %}>Llama 3.3 70B (Best Quality)</option>
-                        <option value="llama-3.1-8b-instant" {% if preferred_model == "llama-3.1-8b-instant" %}selected{% endif %}>Llama 3.1 8B (Faster)</option>
-                        <option value="gemma2-9b-it" {% if preferred_model == "gemma2-9b-it" %}selected{% endif %}>Gemma 2 9B</option>
-                        <option value="mixtral-8x7b-32768" {% if preferred_model == "mixtral-8x7b-32768" %}selected{% endif %}>Mixtral 8x7B</option>
-                        <option value="mistral-saba-24b" {% if preferred_model == "mistral-saba-24b" %}selected{% endif %}>Mistral Saba 24B</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Save Settings</button>
-            </form>
+<div class="container mt-4">
+    <!-- Hero section -->
+    <div class="row align-items-center mb-5 py-4">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold mb-3">Book AI <span class="text-primary">Assistant</span></h1>
+            <p class="lead text-muted mb-4">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
+            <div class="d-flex gap-3">
+                <a href="#upload-section" class="btn btn-primary btn-lg px-4">
+                    <i class="fas fa-upload me-2"></i>Upload a Book
+                </a>
+                <a href="#books-library" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="fas fa-book me-2"></i>Browse Library
+                </a>
+            </div>
         </div>
-    </div>
-    
-    <!-- Upload Form -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Upload a Book</h5>
-            <form id="upload-form" method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <input type="file" class="form-control" name="pdf_file" accept=".pdf" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Upload PDF</button>
-            </form>
-            <div id="upload-progress" class="progress mt-3 d-none">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"></div>
+        <div class="col-lg-6 d-none d-lg-block">
+            <div class="text-center">
+                <img src="https://cdn.pixabay.com/photo/2018/01/17/20/22/analytics-3088958_960_720.png" alt="Book AI Illustration" class="img-fluid rounded shadow-lg" style="max-height: 300px;">
             </div>
         </div>
     </div>
-
-    <!-- Book List -->
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Your Books</h5>
-            {% if books %}
-                <div class="list-group">
-                    {% for book in books %}
-                        <a href="{% url 'view_book' book.id %}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">{{ book.title }}</h5>
-                                <small>{{ book.uploaded_at|date:"M d, Y" }}</small>
-                            </div>
-                            <p class="mb-1">{{ book.page_count }} pages</p>
-                        </a>
-                    {% endfor %}
+    
+    <div class="row mb-5" id="upload-section">
+        <div class="col-lg-6">
+            <!-- API Key Settings -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cogs me-2 text-primary"></i>AI Settings
+                    </h5>
                 </div>
-            {% else %}
-                <p class="text-muted">No books uploaded yet.</p>
-            {% endif %}
+                <div class="card-body">
+                    <form id="api-settings-form">
+                        <div class="mb-3">
+                            <label for="groq-api-key" class="form-label fw-medium">Groq API Key</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="groq-api-key" name="groq_api_key" 
+                                       placeholder="Enter your Groq API key" value="{{ groq_api_key }}">
+                                <button class="btn btn-outline-secondary toggle-password" type="button" data-bs-toggle="tooltip" title="Show/Hide API Key">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Get a free API key from <a href="https://console.groq.com/" target="_blank" class="text-decoration-none">console.groq.com</a></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="model-select" class="form-label fw-medium">AI Model</label>
+                            <select class="form-select" id="model-select" name="model_name">
+                                <option value="llama-3.3-70b-versatile" {% if preferred_model == "llama-3.3-70b-versatile" %}selected{% endif %}>
+                                    Llama 3.3 70B (Best Quality)
+                                </option>
+                                <option value="llama-3.1-8b-instant" {% if preferred_model == "llama-3.1-8b-instant" %}selected{% endif %}>
+                                    Llama 3.1 8B (Faster)
+                                </option>
+                                <option value="gemma2-9b-it" {% if preferred_model == "gemma2-9b-it" %}selected{% endif %}>
+                                    Gemma 2 9B
+                                </option>
+                                <option value="mixtral-8x7b-32768" {% if preferred_model == "mixtral-8x7b-32768" %}selected{% endif %}>
+                                    Mixtral 8x7B
+                                </option>
+                                <option value="mistral-saba-24b" {% if preferred_model == "mistral-saba-24b" %}selected{% endif %}>
+                                    Mistral Saba 24B
+                                </option>
+                            </select>
+                            <div class="form-text">Choose faster models for quicker responses or higher quality for complex questions.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
+        
+        <div class="col-lg-6">
+            <!-- Upload Form -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-upload me-2 text-primary"></i>Upload a Book
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="upload-form" method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="pdf-file" class="form-label fw-medium">Select PDF Book</label>
+                            <div class="input-group mb-3">
+                                <input type="file" class="form-control" name="pdf_file" id="pdf-file" accept=".pdf" required>
+                                <label class="input-group-text" for="pdf-file"><i class="fas fa-file-pdf"></i></label>
+                            </div>
+                            <div class="form-text">Maximum file size: 50MB. Supported format: PDF</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2">
+                            <i class="fas fa-cloud-upload-alt me-2"></i>Upload and Process
+                        </button>
+                    </form>
+                    
+                    <div id="upload-progress" class="mt-4 d-none">
+                        <p class="text-muted mb-2"><i class="fas fa-spinner fa-spin me-2"></i>Processing book, please wait...</p>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">This may take a few minutes for large books.</small>
+                    </div>
+                </div>
+            </div>
+        </div>    
+    <!-- Book Library Section -->
+    <div id="books-library">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold"><i class="fas fa-book-open me-2 text-primary"></i>Your Book Library</h2>
+            
+            <div class="d-flex align-items-center">
+                <div class="input-group me-3">
+                    <input type="text" class="form-control" id="book-search" placeholder="Search books..." aria-label="Search books">
+                    <button class="btn btn-outline-secondary" type="button"><i class="fas fa-search"></i></button>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-sort me-1"></i> Sort
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                        <li><a class="dropdown-item" href="#" data-sort="newest"><i class="fas fa-calendar me-2"></i>Newest First</a></li>
+                        <li><a class="dropdown-item" href="#" data-sort="oldest"><i class="fas fa-calendar-alt me-2"></i>Oldest First</a></li>
+                        <li><a class="dropdown-item" href="#" data-sort="name"><i class="fas fa-sort-alpha-down me-2"></i>Name</a></li>
+                        <li><a class="dropdown-item" href="#" data-sort="pages"><i class="fas fa-file-alt me-2"></i>Page Count</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        {% if books %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 book-cards">
+                {% for book in books %}
+                    <div class="col">
+                        <div class="card h-100 book-card" data-title="{{ book.title }}" data-date="{{ book.uploaded_at|date:'Y-m-d' }}" data-pages="{{ book.page_count }}">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+                                <div class="badge bg-primary rounded-pill">
+                                    <i class="fas fa-file-pdf me-1"></i> PDF
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="far fa-calendar-alt me-1"></i> {{ book.uploaded_at|date:"M d, Y" }}
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold book-title">{{ book.title }}</h5>
+                                
+                                <div class="d-flex align-items-center text-muted mb-3">
+                                    <div class="me-3">
+                                        <i class="fas fa-file-alt me-1"></i> {{ book.page_count }} pages
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-clock me-1"></i> ~{{ book.page_count|intdiv:2 }} min read
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'view_book' book.id %}" class="btn btn-primary">
+                                        <i class="fas fa-book-reader me-2"></i>Read & Study
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white">
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm book-info" data-bs-toggle="tooltip" title="Book Info">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm quick-question" data-book-id="{{ book.id }}" data-bs-toggle="tooltip" title="Quick Question">
+                                        <i class="fas fa-comment-dots"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm book-settings" data-book-id="{{ book.id }}" data-bs-toggle="tooltip" title="Settings">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-books fa-3x text-muted mb-3"></i>
+                <h4>Your library is empty</h4>
+                <p class="text-muted">Upload your first book to get started!</p>
+                <a href="#upload-section" class="btn btn-primary mt-2">
+                    <i class="fas fa-upload me-2"></i>Upload a Book
+                </a>
+            </div>
+        {% endif %}
     </div>
 </div>
 
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // API Settings form submission
+    // Show toast notifications instead of alerts
+    function showToast(message, type) {
+        const toastClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        const toast = `
+            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+                <div class="toast align-items-center ${toastClass} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $(toast).appendTo('body');
+        const toastEl = $('.toast').last();
+        const toastObj = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toastObj.show();
+        
+        setTimeout(() => {
+            toastEl.parent().remove();
+        }, 3500);
+    }
+
+    // API Settings form submission with improved UX
     $('#api-settings-form').on('submit', function(e) {
         e.preventDefault();
+        
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalBtnText = submitBtn.html();
+        
+        // Show loading state
+        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...').prop('disabled', true);
         
         var apiKey = $('#groq-api-key').val().trim();
         var modelName = $('#model-select').val();
@@ -92,17 +246,149 @@ $(document).ready(function() {
                 groq_api_key: apiKey,
                 model_name: modelName
             }),
-            success: function(response) {
+            success: function(response) {                // Reset button
+                submitBtn.html(originalBtnText).prop('disabled', false);
+                
                 if (response.status === 'success') {
-                    alert('API settings saved successfully!');
+                    showToast('API settings saved successfully!', 'success');
                 } else {
-                    alert('Error: ' + response.message);
+                    showToast('Error: ' + response.message, 'error');
                 }
             },
             error: function() {
-                alert('An error occurred while saving settings.');
+                // Reset button
+                submitBtn.html(originalBtnText).prop('disabled', false);
+                showToast('An error occurred while saving settings.', 'error');
             }
         });
+    });
+    
+    // Toggle password visibility for API key input
+    $('.toggle-password').click(function() {
+        const input = $(this).closest('.input-group').find('input');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+    
+    // File upload with progress simulation
+    $('#upload-form').on('submit', function(e) {
+        // Don't prevent default - we want the actual form submission to happen
+        const progressBar = $('#upload-progress');
+        progressBar.removeClass('d-none');
+        
+        // Show progress bar animation
+        const bar = progressBar.find('.progress-bar');
+        bar.css('width', '0%');
+        
+        // Simulate progress - in a real implementation this should use actual upload progress events
+        let progress = 0;
+        const interval = setInterval(function() {
+            progress += Math.floor(Math.random() * 10) + 1;
+            if (progress > 95) {
+                progress = 95; // Let the actual completion finish it
+                clearInterval(interval);
+            }
+            bar.css('width', progress + '%').attr('aria-valuenow', progress);
+        }, 300);
+    });
+    
+    // Book search functionality
+    $('#book-search').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        
+        $('.book-card').each(function() {
+            const title = $(this).data('title').toLowerCase();
+            if (title.includes(searchTerm)) {
+                $(this).closest('.col').show();
+            } else {
+                $(this).closest('.col').hide();
+            }
+        });
+    });
+    
+    // Book sorting functionality
+    $('.dropdown-item[data-sort]').click(function(e) {
+        e.preventDefault();
+        const sortBy = $(this).data('sort');
+        const container = $('.book-cards');
+        const items = container.children('.col').get();
+        
+        items.sort(function(a, b) {
+            const cardA = $(a).find('.book-card');
+            const cardB = $(b).find('.book-card');
+            
+            switch(sortBy) {
+                case 'newest':
+                    return new Date($(cardB).data('date')) - new Date($(cardA).data('date'));
+                case 'oldest':
+                    return new Date($(cardA).data('date')) - new Date($(cardB).data('date'));
+                case 'name':
+                    return $(cardA).data('title').localeCompare($(cardB).data('title'));
+                case 'pages':
+                    return $(cardB).data('pages') - $(cardA).data('pages');
+                default:
+                    return 0;
+            }
+        });
+        
+        $.each(items, function(i, item) {
+            container.append(item);
+        });
+    });
+    
+    // Book info button handler
+    $('.book-info').click(function() {
+        const card = $(this).closest('.book-card');
+        const title = card.data('title');
+        const pages = card.data('pages');
+        const date = card.data('date');
+        
+        // Create and show modal with book info
+        const modal = `
+            <div class="modal fade" id="bookInfoModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>Pages:</strong> ${pages}</p>
+                            <p><strong>Upload Date:</strong> ${date}</p>
+                            <p><strong>Estimated Reading Time:</strong> ${Math.round(pages/2)} minutes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $(modal).appendTo('body');
+        const modalEl = $('#bookInfoModal');
+        const modalObj = new bootstrap.Modal(modalEl);
+        modalObj.show();
+        
+        modalEl.on('hidden.bs.modal', function () {
+            modalEl.remove();
+        });
+    });
+    
+    // Book settings button handler
+    $('.book-settings').click(function() {
+        const bookId = $(this).data('book-id');
+        window.location.href = `{% url 'view_book' 0 %}`.replace('0', bookId) + '#settings';
+    });
+    
+    // Quick question button handler
+    $('.quick-question').click(function() {
+        const bookId = $(this).data('book-id');
+        window.location.href = `{% url 'view_book' 0 %}`.replace('0', bookId) + '#ask';
     });
     
     // Toggle password visibility
