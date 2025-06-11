@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4361ee">
     <title>Book AI Teaching Assistant</title>
+    
+    <!-- App Favicon -->
+    <link rel="shortcut icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234361ee' d='M21,4H3A2,2 0 0,0 1,6V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V6A2,2 0 0,0 21,4M3,19V6H11V19H3M21,19H13V6H21V19M14,9.5H20V11H14V9.5M14,12H20V13.5H14V12M14,14.5H20V16H14V14.5Z'/%3E%3C/svg%3E" type="image/svg+xml">
     
     <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,8 +20,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <style>
-        :root {
+    <style>        :root {
             --primary-color: #4361ee;
             --secondary-color: #3f37c9;
             --accent-color: #4cc9f0;
@@ -25,27 +29,74 @@
             --success-color: #4ade80;
             --warning-color: #fbbf24;
             --danger-color: #f87171;
+            --app-padding: 16px;
+            --border-radius: 12px;
+            --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --transition-speed: 0.3s;
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overscroll-behavior: none; /* Prevents bounce effects on mobile */
         }
         
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #f5f7fa;
+            font-size: 15px; /* Slightly smaller for app-like feel */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            touch-action: manipulation; /* Better touch handling */
         }
         
+        /* Mobile-first approach */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+            
+            .container-fluid {
+                padding-left: var(--app-padding);
+                padding-right: var(--app-padding);
+            }
+        }
+        
+        /* App-like navbar */
         .navbar {
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 12px var(--app-padding);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.95);
         }
         
+        /* App-like cards */
         .card {
             border: none;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+            overflow: hidden; /* Ensures content respects border radius */
         }
         
+        /* Interactive elements have subtle animation */
         .card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 7px 14px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        }
+        
+        /* App-specific overrides */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         
         .btn {

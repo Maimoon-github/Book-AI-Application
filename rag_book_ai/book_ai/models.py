@@ -31,3 +31,22 @@ class Question(models.Model):
 
     def __str__(self):
         return f"{self.chapter.title}: {self.text[:50]}..."
+        
+class ResponseRating(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='ratings')
+    message_id = models.CharField(max_length=100)  # Client-generated ID for the message
+    rating = models.CharField(max_length=20)  # 'useful' or 'not-useful'
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.book.title}: {self.rating} ({self.message_id})"
+        
+class ResponseFeedback(models.Model):
+    rating = models.ForeignKey(ResponseRating, on_delete=models.CASCADE, related_name='feedback', null=True)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='feedback')
+    message_id = models.CharField(max_length=100)
+    feedback_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.book.title}: Feedback for {self.message_id}"

@@ -276,3 +276,154 @@ def update_api_settings(request):
         'status': 'error',
         'message': 'Invalid request method'
     })
+
+@csrf_exempt
+def rate_response(request):
+    """Endpoint to rate an AI response as useful or not useful"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        message_id = data.get('message_id')
+        rating = data.get('rating')  # 'useful' or 'not-useful'
+        book_id = data.get('book_id')
+        
+        if not all([message_id, rating, book_id]):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Missing required fields'
+            })
+            
+        try:
+            book = Book.objects.get(id=book_id)
+            
+            # Create or update rating
+            from .models import ResponseRating
+            
+            rating_obj, created = ResponseRating.objects.get_or_create(
+                book=book,
+                message_id=message_id,
+                defaults={'rating': rating}
+            )
+            
+            if not created:
+                rating_obj.rating = rating
+                rating_obj.save()
+                
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Rating saved successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+            
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+    
+@csrf_exempt
+def submit_feedback(request):
+    """Endpoint to submit detailed feedback for an AI response"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        message_id = data.get('message_id')
+        feedback = data.get('feedback')
+        book_id = data.get('book_id')
+        
+        if not all([message_id, feedback, book_id]):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Missing required fields'
+            })
+            
+        try:
+            book = Book.objects.get(id=book_id)
+            
+            # Find existing rating if any
+            from .models import ResponseRating, ResponseFeedback
+            
+            rating_obj = None
+            try:
+                rating_obj = ResponseRating.objects.get(
+                    book=book,
+                    message_id=message_id
+                )
+            except ResponseRating.DoesNotExist:
+                pass
+                
+            # Create feedback
+            feedback_obj = ResponseFeedback.objects.create(
+                rating=rating_obj,
+                book=book,
+                message_id=message_id,
+                feedback_text=feedback
+            )
+                
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Feedback saved successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+            
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+
+@csrf_exempt
+def store_question(request, book_id):
+    """Endpoint to store questions for analytics and frequency tracking"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        question = data.get('question')
+        chapter_id = data.get('chapter_id')
+        
+        if not question:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Missing required fields'
+            })
+            
+        # If chapter_id is provided, update question frequency
+        if chapter_id:
+            try:
+                chapter = BookChapter.objects.get(id=chapter_id)
+                question_obj, created = Question.objects.get_or_create(
+                    chapter=chapter,
+                    text=question,
+                    defaults={'frequency': 1}
+                )
+                
+                if not created:
+                    question_obj.frequency += 1
+                    question_obj.save()
+                    
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Question stored successfully'
+                })
+                
+            except Exception as e:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': str(e)
+                })
+        
+        # If no chapter, just return success (we still track it in session)
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Question recorded in session'
+        })
+            
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
