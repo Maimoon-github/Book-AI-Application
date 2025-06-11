@@ -1,0 +1,13 @@
+2025-06-11 15:54:26,201 - INFO - BookAI application starting
+2025-06-11 15:54:26,202 - INFO - BookAI Application starting
+2025-06-11 15:54:26,202 - INFO - Using port 60755
+2025-06-11 15:54:26,202 - INFO - Starting server thread
+2025-06-11 15:54:26,203 - INFO - Setting up Streamlit environment
+2025-06-11 15:54:26,203 - INFO - Importing Streamlit
+2025-06-11 15:54:26,834 - INFO - Configuring Streamlit CLI
+2025-06-11 15:54:26,834 - INFO - Looking for book_ai.py at: C:\Users\MEDIAD~1\AppData\Local\Temp\_MEI244602\book_ai.py
+2025-06-11 15:54:26,834 - WARNING - book_ai.py not found as file, trying module import
+2025-06-11 15:54:26,834 - INFO - Starting Streamlit with: streamlit run book_ai --server.port 60755 --server.headless true --browser.gatherUsageStats false --server.address localhost --global.developmentMode false
+2025-06-11 15:54:41,212 - INFO - Opening browser to: http://localhost:60755
+2025-06-11 15:54:41,295 - WARNING - Server thread stopped unexpectedly
+2025-06-11 15:54:46,296 - WARNING - Server thread stopped
