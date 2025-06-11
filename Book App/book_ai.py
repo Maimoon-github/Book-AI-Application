@@ -5,18 +5,20 @@ import tempfile
 import warnings
 from typing import List, Dict, Tuple, Optional, Any, Sequence
 import pandas as pd
-import fitz  # PyMuPDF
 
 # Suppress specific PyTorch warnings that are harmless in Streamlit context
 warnings.filterwarnings("ignore", message=".*torch.classes.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")
 os.environ["PYTORCH_DISABLE_VERSION_CHECK"] = "1"
 
-# RAG and AI imports
+# Import PyMuPDF first
+import fitz  # PyMuPDF
+
+# RAG and AI imports - we'll defer actual model loading using st.cache_resource
 import chromadb
-from sentence_transformers import SentenceTransformer
 from typing_extensions import Annotated, TypedDict
 
+# Check if RAG libraries are available
 try:
     from langchain_groq import ChatGroq
     from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
@@ -24,6 +26,7 @@ try:
     from langgraph.graph import START, StateGraph
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.graph.message import add_messages
+    # Don't import SentenceTransformer globally - we'll load it only when needed
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
@@ -37,13 +40,27 @@ SUPPORTED_MODELS = [
     "mixtral-8x7b-32768"
 ]
 
+# Cache the embedding model to prevent reloading
+@st.cache_resource
+def load_embedding_model(model_name='all-MiniLM-L6-v2'):
+    """Load the sentence transformer model with caching to avoid reinitialization"""
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer(model_name)
+
 class BookTeachingRAG:
     def __init__(self):
         self.chroma_client = chromadb.Client()
         self.collection = None
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Don't initialize the embedding model here - we'll do it lazily when needed
+        self.embedding_model = None
         self.groq_model = None
         self.app = None
+    
+    def get_embedding_model(self):
+        """Lazily load the embedding model only when needed"""
+        if self.embedding_model is None:
+            self.embedding_model = load_embedding_model()
+        return self.embedding_model
         
     def setup_groq_model(self, api_key, model_name="llama-3.3-70b-versatile"):
         """Initialize Groq model for teaching responses"""
@@ -174,8 +191,11 @@ Remember: You are not just answering questions - you are facilitating deep, mean
         metadatas = []
         ids = []
         
+        # Get the embedding model only when needed
+        embedding_model = self.get_embedding_model()
+        
         for i, chunk in enumerate(rag_chunks):
-            embedding = self.embedding_model.encode(chunk['text'])
+            embedding = embedding_model.encode(chunk['text'])
             
             documents.append(chunk['text'])
             embeddings.append(embedding.tolist())
@@ -229,8 +249,10 @@ Remember: You are not just answering questions - you are facilitating deep, mean
         """Retrieve most relevant chunks for the query"""
         if not self.collection:
             return {"documents": [[]], "metadatas": [[]]}
-            
-        query_embedding = self.embedding_model.encode(query)
+        
+        # Get the embedding model only when needed
+        embedding_model = self.get_embedding_model()
+        query_embedding = embedding_model.encode(query)
         
         where_clause = None
         if chapter_filter:
@@ -606,6 +628,7 @@ def create_teaching_interface(result, api_key):
         with st.spinner("Setting up AI teacher..."):
             try:
                 st.session_state.rag_system = BookTeachingRAG()
+                # We now index the book content with proper error handling for PyTorch models
                 st.session_state.rag_system.index_book_content(result['chunks'])
                 st.success("AI Teacher initialized! 🎓")
             except Exception as e:
