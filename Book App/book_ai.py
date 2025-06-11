@@ -859,58 +859,61 @@ def create_teaching_interface(result, api_key):
         # Generate AI response
         with st.chat_message("assistant"):
             with st.spinner("Teaching..."):
-                # Define chapter_filter based on selected_chapter
-                chapter_filter = selected_chapter if selected_chapter != "All Chapters" else None
+                # Convert messages to LangChain format
+                lc_messages = []
+                for msg in st.session_state.teaching_messages[:-1]:  # Exclude the current user message
+                    if msg["role"] == "user":
+                        lc_messages.append(HumanMessage(content=msg["content"]))
+                    else:
+                        lc_messages.append(AIMessage(content=msg["content"]))
                 
                 try:
-                    # Suppress PyTorch warnings during response generation
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", category=RuntimeWarning)
-                        warnings.filterwarnings("ignore", message=".*torch.*")
-                        
-                        # Convert messages to LangChain format
-                        lc_messages = []
-                        for msg in st.session_state.teaching_messages[:-1]:
-                            if msg["role"] == "user":
-                                lc_messages.append(HumanMessage(content=msg["content"]))
-                            else:
-                                lc_messages.append(AIMessage(content=msg["content"]))
-                        
-                        response = st.session_state.rag_system.teach_topic(
-                            prompt, 
-                            lc_messages, 
-                            chapter_filter,  # Now properly defined
-                            st.session_state.thread_id
-                        )
-                        
-                        ai_content = response["response"].content
-                        st.markdown(ai_content)
-                        
-                        # Show sources
-                        if response["sources"]:
-                            with st.expander("📚 Sources Used"):
-                                for source in response["sources"]:
-                                    st.write(f"• {source}")
-                        
-                        # Add to history
-                        st.session_state.teaching_messages.append({
-                            "role": "assistant", 
-                            "content": ai_content,
-                            "sources": response["sources"]
-                        })
-                        
+                    response = st.session_state.rag_system.teach_topic(
+                        prompt, 
+                        lc_messages, 
+                        chapter_filter,
+                        st.session_state.thread_id
+                    )
+                    
+                    ai_content = response["response"].content
+                    st.markdown(ai_content)
+                    
+                    # Show sources
+                    if response["sources"]:
+                        with st.expander("📚 Sources Used"):
+                            for source in response["sources"]:
+                                st.write(f"• {source}")
+                    
+                    # Add learning suggestions
+                    with st.expander("🎯 Learning Suggestions", expanded=False):
+                        st.markdown("""
+                        **To enhance your learning:**
+                        - Try asking follow-up questions about specific concepts
+                        - Request examples or real-world applications
+                        - Ask for connections to other chapters
+                        - Request summaries of complex topics
+                        - Ask "How does this relate to...?" for deeper understanding
+                        """)
+                    
+                    # Add to history
+                    st.session_state.teaching_messages.append({
+                        "role": "assistant", 
+                        "content": ai_content,
+                        "sources": response["sources"]
+                    })
+                    
                 except ValueError as ve:
+                    # For our custom ValueError with API key issues
                     st.error(f"❌ API Key Error: {str(ve)}")
-                    st.info("Please update your API key in the sidebar.")
-                except RuntimeError as re:
-                    if "torch" in str(re):
-                        st.error("PyTorch initialization error. Retrying...")
-                        st.rerun()
-                    else:
-                        st.error(f"Runtime error: {str(re)}")
+                    st.info("Please update your API key in the sidebar and try again. You can get a free API key from https://console.groq.com/")
                 except Exception as e:
-                    st.error(f"Teaching error: {str(e)}")
-                    st.info("Please try again or check your connection.")
+                    error_msg = str(e)
+                    if "401" in error_msg and ("invalid_api_key" in error_msg or "Invalid API Key" in error_msg):
+                        st.error("❌ Invalid API Key: The API key you provided is not working.")
+                        st.info("Please check your API key in the sidebar. You can get a free API key from https://console.groq.com/")
+                    else:
+                        st.error(f"Teaching error: {error_msg}")
+                        st.info("Please try again or check your connection.")
 
 def main():
     st.title("📚 Book AI Processor with Teaching Assistant")
