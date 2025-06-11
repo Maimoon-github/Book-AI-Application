@@ -17,6 +17,44 @@ class BookTeachingRAG:
         self.collection = None
         self.groq_model = None
         self.app = None
+        
+    def _split_into_paragraphs(self, text):
+        """Split text into paragraphs for better semantic chunking"""
+        # First split by double newlines (typical paragraph breaks)
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        
+        # For paragraphs that are still too long, try to split at single newlines
+        result = []
+        for para in paragraphs:
+            if len(para.split()) > 200:  # If paragraph is very long
+                subparas = [sp.strip() for sp in para.split('\n') if sp.strip()]
+                result.extend(subparas)
+            else:
+                result.append(para)
+                
+        return result
+    
+    def _extract_section_header(self, text):
+        """Extract a possible section header from text to improve metadata"""
+        # Look for common header patterns
+        import re
+        header_patterns = [
+            r"^#+\s+(.+)$",                     # Markdown headers
+            r"^(\d+\.[\d\.]*\s+[A-Z][^\.]+)",   # Numbered sections like "1.2 Title"
+            r"^([A-Z][^\.]{3,50})\s*$",         # UPPERCASE or Title Case headers
+            r"^(Chapter \d+[:\s]+[^\n]+)",      # Chapter headers
+            r"^(Section \d+[:\s]+[^\n]+)"       # Section headers
+        ]
+        
+        lines = text.split('\n')
+        for line in lines[:5]:  # Check only first 5 lines for headers
+            line = line.strip()
+            for pattern in header_patterns:
+                match = re.match(pattern, line, re.MULTILINE)
+                if match:
+                    return match.group(1)
+        
+        return None
     
     def setup_groq_model(self, api_key, model_name="llama-3.3-70b-versatile"):
         """Initialize Groq model for teaching responses"""
@@ -142,7 +180,7 @@ Remember to always base your teaching on the book content. Use specific examples
             metadatas=metadatas,
             ids=ids
         )
-    
+        
     def create_rag_chunks(self, book_chunks):
         """Split large chapters into smaller, contextual chunks using overlapping sliding windows"""
         rag_chunks = []

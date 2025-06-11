@@ -5,13 +5,22 @@ from .models import Book, BookChapter, Question
 import os
 import tempfile
 from .utils.pdf_processor import PDFProcessor
-from .utils.book_teaching_rag import BookTeachingRAG
+# Using the improved RAG implementation for better chunking
+from .utils.improved_book_teaching_rag import BookTeachingRAG
 from django.views.decorators.csrf import csrf_exempt
 import json
 
 def home(request):
+    # If a default API key exists in session, retrieve it
+    groq_api_key = request.session.get('groq_api_key', '')
+    preferred_model = request.session.get('preferred_model', 'llama-3.3-70b-versatile')
+    
     books = Book.objects.all().order_by('-uploaded_at')
-    return render(request, 'book_ai/home.html', {'books': books})
+    return render(request, 'book_ai/home.html', {
+        'books': books, 
+        'groq_api_key': groq_api_key,
+        'preferred_model': preferred_model
+    })
 
 @csrf_exempt
 def upload_book(request):
@@ -105,11 +114,16 @@ def ask_question(request, book_id):
         
         # Get previous messages from session
         messages_history = request.session.get('teaching_messages', [])
-        
-        # Generate response
+          # Generate response
         try:
-            groq_api_key = settings.GROQ_API_KEY  # You'll need to add this to settings.py
-            rag.setup_groq_model(groq_api_key)
+            # Try to get API key in the following order:
+            # 1. Book-specific API key
+            # 2. Session API key
+            # 3. Settings API key (fallback)
+            groq_api_key = book.groq_api_key if book.groq_api_key else request.session.get('groq_api_key', settings.GROQ_API_KEY)
+            model_name = book.preferred_model if book.preferred_model else request.session.get('preferred_model', 'llama-3.3-70b-versatile')
+            
+            rag.setup_groq_model(groq_api_key, model_name)
             
             # Index book content if not already done
             if 'book_indexed' not in request.session:
@@ -183,3 +197,35 @@ def clear_chat(request, book_id):
     if 'teaching_messages' in request.session:
         del request.session['teaching_messages']
     return redirect('view_book', book_id=book_id)
+
+@csrf_exempt
+def update_api_settings(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        groq_api_key = data.get('groq_api_key', '')
+        model_name = data.get('model_name', 'llama-3.3-70b-versatile')
+        
+        # Store in session for use across the site
+        request.session['groq_api_key'] = groq_api_key
+        request.session['preferred_model'] = model_name
+        
+        # If we're working with a specific book, update its settings too
+        book_id = data.get('book_id')
+        if book_id:
+            try:
+                book = Book.objects.get(id=book_id)
+                book.groq_api_key = groq_api_key
+                book.preferred_model = model_name
+                book.save()
+            except Book.DoesNotExist:
+                pass
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'API settings updated successfully'
+        })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })

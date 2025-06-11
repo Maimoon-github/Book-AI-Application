@@ -8,4 +8,5 @@ urlpatterns = [
     path('book/<int:book_id>/ask/', views.ask_question, name='ask_question'),
     path('book/<int:book_id>/clear-chat/', views.clear_chat, name='clear_chat'),
     path('chapter/<int:chapter_id>/frequent-questions/', views.get_frequent_questions, name='get_frequent_questions'),
+    path('update-api-settings/', views.update_api_settings, name='update_api_settings'),
 ]

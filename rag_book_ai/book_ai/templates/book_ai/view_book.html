@@ -10,6 +10,13 @@
                     <h5 class="card-title">{{ book.title }}</h5>
                     <p class="text-muted">{{ book.page_count }} pages</p>
                     
+                    <!-- API Settings -->
+                    <div class="mb-3">
+                        <button class="btn btn-sm btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#apiSettingsModal">
+                            <i class="fas fa-cogs"></i> AI Settings
+                        </button>
+                    </div>
+                    
                     <h6 class="mt-4">Chapters</h6>
                     <div class="list-group">
                         <a href="#" class="list-group-item list-group-item-action" 
@@ -71,6 +78,47 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Settings Modal -->
+<div class="modal fade" id="apiSettingsModal" tabindex="-1" aria-labelledby="apiSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="apiSettingsModalLabel">AI Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="api-settings-form">
+                    <div class="mb-3">
+                        <label for="groq-api-key" class="form-label">Groq API Key</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="groq-api-key" name="groq_api_key" 
+                                placeholder="Enter your Groq API key" value="{{ book.groq_api_key }}">
+                            <button class="btn btn-outline-secondary toggle-password" type="button">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Get a free API key from <a href="https://console.groq.com/" target="_blank">console.groq.com</a></small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="model-select" class="form-label">AI Model</label>
+                        <select class="form-select" id="model-select" name="model_name">
+                            <option value="llama-3.3-70b-versatile" {% if book.preferred_model == "llama-3.3-70b-versatile" %}selected{% endif %}>Llama 3.3 70B (Best Quality)</option>
+                            <option value="llama-3.1-8b-instant" {% if book.preferred_model == "llama-3.1-8b-instant" %}selected{% endif %}>Llama 3.1 8B (Faster)</option>
+                            <option value="gemma2-9b-it" {% if book.preferred_model == "gemma2-9b-it" %}selected{% endif %}>Gemma 2 9B</option>
+                            <option value="mixtral-8x7b-32768" {% if book.preferred_model == "mixtral-8x7b-32768" %}selected{% endif %}>Mixtral 8x7B</option>
+                            <option value="mistral-saba-24b" {% if book.preferred_model == "mistral-saba-24b" %}selected{% endif %}>Mistral Saba 24B</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="save-api-settings">Save Settings</button>
             </div>
         </div>
     </div>
@@ -180,6 +228,49 @@ function clearChat() {
     }
 }
 
+// Save API Settings
+function saveAPISettings() {
+    const apiKey = $('#groq-api-key').val().trim();
+    const modelName = $('#model-select').val();
+    
+    $.ajax({
+        url: '{% url "update_api_settings" %}',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            groq_api_key: apiKey,
+            model_name: modelName,
+            book_id: {{ book.id }}
+        }),
+        success: function(response) {
+            if (response.status === 'success') {
+                // Close modal and show success message
+                $('#apiSettingsModal').modal('hide');
+                alert('API settings saved successfully!');
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('An error occurred while saving settings.');
+        }
+    });
+}
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+    const passwordInput = $('#groq-api-key');
+    const icon = $('.toggle-password i');
+    
+    if (passwordInput.attr('type') === 'password') {
+        passwordInput.attr('type', 'text');
+        icon.removeClass('fa-eye').addClass('fa-eye-slash');
+    } else {
+        passwordInput.attr('type', 'password');
+        icon.removeClass('fa-eye-slash').addClass('fa-eye');
+    }
+}
+
 // Setup event handlers
 $(document).ready(function() {
     $('#question-input').keypress(function(e) {
@@ -187,6 +278,10 @@ $(document).ready(function() {
             askQuestion();
         }
     });
+    
+    // API Settings event handlers
+    $('.toggle-password').click(togglePasswordVisibility);
+    $('#save-api-settings').click(saveAPISettings);
 });
 </script>
 {% endblock %}
