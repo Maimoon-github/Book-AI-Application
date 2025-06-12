@@ -65,7 +65,8 @@ def profile_view(request):
         profile = request.user.profile
     except:
         profile = UserProfile.objects.create(user=request.user)
-          if request.method == 'POST':
+        
+    if request.method == 'POST':
         user_form = UserEditForm(request.POST, instance=request.user)
         profile_form = UserProfileForm(request.POST, request.FILES, instance=profile)
         if user_form.is_valid() and profile_form.is_valid():
