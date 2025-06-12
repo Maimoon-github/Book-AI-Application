@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
-from .models import Book, BookChapter, Question
+from .models import Book, BookChapter, Question, UserProfile
+from .forms import SignUpForm, LoginForm, UserProfileForm, UserEditForm
 import os
 import tempfile
 from .utils.pdf_processor import PDFProcessor
@@ -11,7 +12,78 @@ from .utils.pdf_processor import PDFProcessor
 from .utils.improved_book_teaching_rag import BookTeachingRAG
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth.forms import AuthenticationForm
 
+def login_view(request):
+    if request.method == 'POST':
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f"Welcome back, {username}!")
+                return redirect('home')
+            else:
+                messages.error(request, "Invalid username or password.")
+        else:
+            messages.error(request, "Invalid username or password.")
+    else:
+        form = LoginForm()
+    return render(request, 'book_ai/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    messages.success(request, "You have been logged out successfully!")
+    return redirect('login')
+
+def signup_view(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Create user profile
+            UserProfile.objects.create(user=user)
+            username = form.cleaned_data.get('username')
+            raw_password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=raw_password)
+            login(request, user)
+            messages.success(request, f"Account created successfully. Welcome, {username}!")
+            return redirect('home')
+    else:
+        form = SignUpForm()
+    return render(request, 'book_ai/signup.html', {'form': form})
+
+@login_required
+def profile_view(request):
+    # Check if profile exists, if not create one
+    try:
+        profile = request.user.profile
+    except:
+        profile = UserProfile.objects.create(user=request.user)
+        
+    if request.method == 'POST':
+        user_form = UserEditForm(request.POST, instance=request.user)
+        profile_form = UserProfileForm(request.POST, request.FILES, instance=profile)
+          if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Your profile was successfully updated!')
+            return redirect('profile')
+    else:
+        user_form = UserEditForm(instance=request.user)
+        profile_form = UserProfileForm(instance=profile)
+    
+    return render(request, 'book_ai/profile.html', {
+        'user_form': user_form,
+        'profile_form': profile_form
+    })
+
+@login_required
 def home(request):
     # If a default API key exists in session, retrieve it
     groq_api_key = request.session.get('groq_api_key', '')
@@ -25,6 +97,7 @@ def home(request):
     })
 
 @csrf_exempt
+@login_required
 def upload_book(request):
     if request.method == 'POST' and request.FILES.get('pdf_file'):
         pdf_file = request.FILES['pdf_file']
@@ -87,6 +160,7 @@ def upload_book(request):
         'message': 'Invalid request'
     })
 
+@login_required
 def view_book(request, book_id):
     book = Book.objects.get(id=book_id)
     chapters = book.chapters.filter(parent=None).prefetch_related('children')
