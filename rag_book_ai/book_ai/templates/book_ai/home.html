@@ -2,42 +2,39 @@
 {% load math_filters %}
 
 {% block content %}
-<div class="container mt-4">
-    <!-- Hero section -->
-    <div class="row align-items-center mb-5 py-4">
-        <div class="col-lg-6">            <h1 class="display-4 fw-bold mb-3">Book AI <span style="color: black;">Assistant</span></h1>
-            <p class="lead mb-4" style="color: black;">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
-            <div class="d-flex gap-3">
-                <a href="#upload-section" class="btn btn-primary btn-lg px-4">
+<div class="container mt-3">    <!-- Hero section -->
+    <div class="row align-items-center mb-4 py-3">
+        <div class="col-lg-6">            <h1 class="display-5 fw-bold mb-3">Book AI <span style="color: var(--text-dark);">Assistant</span></h1>
+            <p class="lead mb-3" style="color: var(--text-dark); font-size: 1.1rem;">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
+            <div class="d-flex gap-2">
+                <a href="#upload-section" class="btn btn-primary px-3">
                     <i class="fas fa-upload me-2"></i>Upload a Book
                 </a>
-                <a href="#books-library" class="btn btn-outline-secondary btn-lg px-4">
+                <a href="#books-library" class="btn btn-outline-secondary px-3">
                     <i class="fas fa-book me-2"></i>Browse Library
                 </a>
             </div>
         </div>        <div class="col-lg-6 d-none d-lg-block">
             <div class="text-center">
-                <img src="/media/profile_pics/Logo.png" alt="Book AI Illustration" class="img-fluid rounded shadow-lg" style="max-height: 300px;">
-                <div class="mt-3">
-                    <h4 style="color: black;">Your Personal Book Assistant</h4>
+                <img src="/media/profile_pics/Logo.png" alt="Book AI Illustration" class="img-fluid rounded shadow-lg" style="max-height: 250px;">
+                <div class="mt-2">
+                    <h4 style="color: var(--text-dark); font-size: 1.1rem;">Your Personal Book Assistant</h4>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <div class="row mb-5" id="upload-section">
+    </div>    
+    <div class="row mb-4" id="upload-section">
         <div class="col-lg-6">
             <!-- API Key Settings -->
-            <div class="card mb-4 border-0 shadow-sm">                <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0" style="color: black;">
-                        <i class="fas fa-cogs me-2" style="color: black;"></i>AI Settings
+            <div class="card mb-3 border-0 shadow-sm">                <div class="card-header bg-white py-2">
+                    <h5 class="card-title mb-0" style="color: var(--text-dark); font-size: 1rem;">
+                        <i class="fas fa-cogs me-2" style="color: var(--primary-color);"></i>AI Settings
                     </h5>
                 </div>
-                <div class="card-body">
-                    <form id="api-settings-form">
+                <div class="card-body p-3">                    <form id="api-settings-form">
                         <div class="mb-3">
-                            <label for="groq-api-key" class="form-label fw-medium">Groq API Key</label>
-                            <div class="input-group">
+                            <label for="groq-api-key" class="form-label fw-medium" style="font-size: 0.9rem;">Groq API Key</label>
+                            <div class="input-group input-group-sm">
                                 <span class="input-group-text"><i class="fas fa-key"></i></span>
                                 <input type="password" class="form-control" id="groq-api-key" name="groq_api_key" 
                                        placeholder="Enter your Groq API key" value="{{ groq_api_key }}">
@@ -45,11 +42,10 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
-                            <small style="color: black;">Get a free API key from <a href="https://console.groq.com/" target="_blank" class="text-decoration-none" style="color: black;">console.groq.com</a></small>
+                            <small style="color: var(--text-dark); font-size: 0.8rem;">Get a free API key from <a href="https://console.groq.com/" target="_blank" class="text-decoration-none" style="color: var(--primary-color);">console.groq.com</a></small>
                         </div>
                         <div class="mb-3">
-                            <label for="model-select" class="form-label fw-medium">AI Model</label>
-                            <select class="form-select" id="model-select" name="model_name">
+                            <label for="model-select" class="form-label fw-medium" style="font-size: 0.9rem;">AI Model</label>                            <select class="form-select form-select-sm" id="model-select" name="model_name">
                                 <option value="llama-3.3-70b-versatile" {% if preferred_model == "llama-3.3-70b-versatile" %}selected{% endif %}>
                                     Llama 3.3 70B (Best Quality)
                                 </option>
@@ -66,9 +62,9 @@
                                     Mistral Saba 24B
                                 </option>
                             </select>
-                            <div class="form-text" style="color: black;">Choose faster models for quicker responses or higher quality for complex questions.</div>
+                            <div class="form-text" style="color: var(--text-dark); font-size: 0.8rem;">Choose faster models for quicker responses or higher quality for complex questions.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="fas fa-save me-2"></i>Save Settings
                         </button>
                     </form>
@@ -78,9 +74,9 @@
         
         <div class="col-lg-6">
             <!-- Upload Form -->
-            <div class="card mb-4 border-0 shadow-sm">                <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0" style="color: black;">
-                        <i class="fas fa-upload me-2" style="color: black;"></i>Upload a Book
+            <div class="card mb-3 border-0 shadow-sm">                <div class="card-header bg-white py-2">
+                    <h5 class="card-title mb-0" style="color: var(--text-dark); font-size: 1rem;">
+                        <i class="fas fa-upload me-2" style="color: var(--primary-color);"></i>Upload a Book
                     </h5>
                 </div>
                 <div class="card-body">

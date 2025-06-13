@@ -62,8 +62,7 @@
             -moz-osx-font-smoothing: grayscale;
             touch-action: manipulation; /* Better touch handling */
         }
-        
-        /* Mobile-first approach */
+          /* Mobile-first approach - more responsive */
         @media (max-width: 768px) {
             body {
                 font-size: 14px;
@@ -72,6 +71,20 @@
             .container-fluid {
                 padding-left: var(--app-padding);
                 padding-right: var(--app-padding);
+            }
+            
+            .card-body {
+                padding: 0.75rem; /* Even more compact on mobile */
+            }
+            
+            .btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.85rem;
+            }
+            
+            .chat-message {
+                max-width: 95%; /* Use more screen width on mobile */
+                padding: 0.75rem;
             }
         }
         
@@ -84,20 +97,38 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             background-color: rgba(255, 255, 255, 0.95);
-        }
-          /* Making all text black as requested */
+        }        /* Making all text black and improving contrast */
         p, h1, h2, h3, h4, h5, h6, span, div:not(.btn), label, a:not(.btn), .text-dark, 
-        .text-muted, .nav-link, .dropdown-item, .form-label, .form-text, .card-text, .card-title {
-            color: black !important;
+        .text-muted, .nav-link, .dropdown-item, .form-label, .form-text, .card-text, .card-title,
+        .modal-body p, .modal-body h6, .modal-body li, .modal-body small, .list-group-item {
+            color: #2c1810 !important;
         }
-          /* App-like cards */
+        
+        /* Ensure buttons have proper contrast */
+        .btn:not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-danger):not(.btn-warning):not(.btn-info) {
+            color: #2c1810 !important;
+        }
+        
+        /* Fix white text issues on light backgrounds */
+        .badge.bg-light, .badge.text-light {
+            color: #2c1810 !important;
+        }        /* App-like cards - more compact */
         .card {
             border: none;
             border-radius: var(--border-radius);
             background: var(--lightest-bg);
             box-shadow: var(--card-shadow);
             transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-            overflow: hidden; /* Ensures content respects border radius */
+            overflow: hidden;
+            margin-bottom: 1rem; /* More compact spacing */
+        }
+        
+        .card-body {
+            padding: 1rem; /* Reduced from default 1.25rem */
+        }
+        
+        .card-header {
+            padding: 0.75rem 1rem; /* More compact header */
         }
         
         /* Interactive elements have subtle animation */
@@ -114,11 +145,17 @@
             height: 100%;
             display: flex;
             flex-direction: column;
-        }
-          .btn {
+        }        .btn {
             border-radius: 0.5rem;
             font-weight: 500;
             color: white;
+            padding: 0.5rem 1rem; /* More compact buttons */
+            font-size: 0.9rem; /* Slightly smaller text */
+        }
+        
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
         }
         
         .btn-primary {
@@ -148,8 +185,7 @@
             opacity: 0;
             transition: opacity 0.3s;
             z-index: -1;
-        }
-          /* Chat styling with improved design */
+        }        /* Chat styling with improved design - more compact */
         .chat-container {
             height: 100%;
             display: flex;
@@ -160,18 +196,18 @@
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 1rem;
+            padding: 0.75rem; /* Reduced padding */
         }
         
         .chat-message {
-            margin-bottom: 1.5rem;
-            padding: 1.25rem;
+            margin-bottom: 1rem; /* Reduced spacing between messages */
+            padding: 1rem; /* Reduced padding */
             border-radius: 1rem;
             animation: fadeIn 0.3s ease-in-out;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             position: relative;
             max-width: 85%;
-            line-height: 1.6;
+            line-height: 1.5; /* Improved readability */
         }
         
         @keyframes fadeIn {
@@ -228,9 +264,8 @@
         .user-message .message-header {
             justify-content: flex-end;
             color: rgba(255, 255, 255, 0.9);
-        }
-          .assistant-message .message-header {
-            color: black;
+        }        .assistant-message .message-header {
+            color: var(--text-dark);
         }
         
         .message-avatar {
@@ -473,9 +508,9 @@
         <div class="gradient-circle"></div>
         <div class="gradient-circle"></div>
         <div class="gradient-circle"></div>
-    </div><nav class="navbar navbar-expand-lg navbar-light" style="background-color: white; box-shadow: 0 2px 10px rgba(225, 115, 42, 0.2)">
+    </div>    <nav class="navbar navbar-expand-lg navbar-light" style="background-color: white; box-shadow: 0 2px 10px rgba(225, 115, 42, 0.2)">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}" style="color: black;">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}" style="color: var(--text-dark);">
                 <i class="fas fa-book-reader me-2" style="color: var(--primary-color);"></i>
                 <span class="fw-bold">Book AI Assistant</span>
             </a>
@@ -484,28 +519,27 @@
             </button>            <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}" style="color: black;"><i class="fas fa-home me-1" style="color: var(--primary-color);"></i> Home</a>
+                        <a class="nav-link" href="{% url 'home' %}" style="color: var(--text-dark);"><i class="fas fa-home me-1" style="color: var(--primary-color);"></i> Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#helpModal" style="color: black;">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#helpModal" style="color: var(--text-dark);">
                             <i class="fas fa-question-circle me-1" style="color: var(--primary-color);"></i> Help
                         </a>
                     </li>
                     {% if user.is_authenticated %}                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" style="color: black;">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" style="color: var(--text-dark);">
                             <i class="fas fa-user-circle me-1" style="color: var(--primary-color);"></i> {{ user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{% url 'profile' %}" style="color: black;"><i class="fas fa-id-card me-2" style="color: var(--primary-color);"></i>Profile</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'logout' %}" style="color: black;"><i class="fas fa-sign-out-alt me-2" style="color: var(--primary-color);"></i>Logout</a></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}" style="color: var(--text-dark);"><i class="fas fa-id-card me-2" style="color: var(--primary-color);"></i>Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>                            <li><a class="dropdown-item" href="{% url 'logout' %}" style="color: var(--text-dark);"><i class="fas fa-sign-out-alt me-2" style="color: var(--primary-color);"></i>Logout</a></li>
                         </ul>
                     </li>
                     {% else %}                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}" style="color: black;"><i class="fas fa-sign-in-alt me-1" style="color: var(--primary-color);"></i> Login</a>
+                        <a class="nav-link" href="{% url 'login' %}" style="color: var(--text-dark);"><i class="fas fa-sign-in-alt me-1" style="color: var(--primary-color);"></i> Login</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'signup' %}" style="color: black;"><i class="fas fa-user-plus me-1" style="color: var(--primary-color);"></i> Sign Up</a>
+                        <a class="nav-link" href="{% url 'signup' %}" style="color: var(--text-dark);"><i class="fas fa-user-plus me-1" style="color: var(--primary-color);"></i> Sign Up</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -513,7 +547,7 @@
         </div>
     </nav>
 
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-3">
         {% if messages %}
             <div class="container mb-4">
                 {% for message in messages %}
@@ -528,44 +562,42 @@
         {% block content %}
         {% endblock %}
     </div>    <!-- Footer -->
-    <footer class="footer mt-5 py-4" style="background-color: var(--lightest-bg);">
+    <footer class="footer mt-4 py-3" style="background-color: var(--lightest-bg);">
         <div class="container">
             <div class="row">                <div class="col-md-6">
-                    <h5 class="mb-3" style="color: black;">About Book AI Assistant</h5>
-                    <p style="color: black;">
+                    <h5 class="mb-2" style="color: var(--text-dark);">About Book AI Assistant</h5>
+                    <p style="color: var(--text-dark); font-size: 0.9rem;">
                         A powerful AI-driven tool that helps you analyze, understand, and learn from books through interactive AI conversations.
                     </p>
                 </div>                <div class="col-md-3">
-                    <h5 class="mb-3" style="color: black;">Quick Links</h5>
+                    <h5 class="mb-2" style="color: var(--text-dark);">Quick Links</h5>
                     <ul class="nav flex-column">
-                        <li class="nav-item mb-2"><a href="{% url 'home' %}" class="nav-link p-0" style="color: black;">Home</a></li>
-                        <li class="nav-item mb-2"><a href="#" class="nav-link p-0" style="color: black;" data-bs-toggle="modal" data-bs-target="#helpModal">Help</a></li>
+                        <li class="nav-item mb-1"><a href="{% url 'home' %}" class="nav-link p-0" style="color: var(--text-dark); font-size: 0.9rem;">Home</a></li>
+                        <li class="nav-item mb-1"><a href="#" class="nav-link p-0" style="color: var(--text-dark); font-size: 0.9rem;" data-bs-toggle="modal" data-bs-target="#helpModal">Help</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
-                    <h5 class="mb-3" style="color: black;">Resources</h5>                    <ul class="nav flex-column">
-                        <li class="nav-item mb-2"><a href="https://console.groq.com/" target="_blank" class="nav-link p-0" style="color: black;">Groq API</a></li>
-                        <li class="nav-item mb-2"><a href="#" class="nav-link p-0" style="color: black;" data-bs-toggle="modal" data-bs-target="#apiInfoModal">API Guide</a></li>
+                    <h5 class="mb-2" style="color: var(--text-dark);">Resources</h5>                    <ul class="nav flex-column">
+                        <li class="nav-item mb-1"><a href="https://console.groq.com/" target="_blank" class="nav-link p-0" style="color: var(--text-dark); font-size: 0.9rem;">Groq API</a></li>
+                        <li class="nav-item mb-1"><a href="#" class="nav-link p-0" style="color: var(--text-dark); font-size: 0.9rem;" data-bs-toggle="modal" data-bs-target="#apiInfoModal">API Guide</a></li>
                     </ul>
                 </div>
-            </div>            <div class="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
-                <p class="mb-0" style="color: black;">© 2025 Book AI Assistant</p>
+            </div>            <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top">
+                <p class="mb-0" style="color: var(--text-dark); font-size: 0.9rem;">© 2025 Book AI Assistant</p>
                 <ul class="list-unstyled d-flex">
-                    <li class="ms-3"><a style="color: black;" href="#"><i class="fab fa-github"></i></a></li>
-                    <li class="ms-3"><a style="color: black;" href="#"><i class="fab fa-twitter"></i></a></li>
-                    <li class="ms-3"><a style="color: black;" href="#"><i class="fab fa-discord"></i></a></li>
+                    <li class="ms-3"><a style="color: var(--text-dark);" href="#"><i class="fab fa-github"></i></a></li>
+                    <li class="ms-3"><a style="color: var(--text-dark);" href="#"><i class="fab fa-twitter"></i></a></li>
+                    <li class="ms-3"><a style="color: var(--text-dark);" href="#"><i class="fab fa-discord"></i></a></li>
                 </ul>
             </div>
         </div>
-    </footer>
-
-    <!-- Help Modal -->    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+    </footer>    <!-- Help Modal -->    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background-color: var(--lightest-bg);">
-                    <h5 class="modal-title" style="color: black;"><i class="fas fa-question-circle me-2" style="color: var(--primary-color);"></i>How to Use Book AI Assistant</h5>
+                    <h5 class="modal-title" style="color: var(--text-dark);"><i class="fas fa-question-circle me-2" style="color: var(--primary-color);"></i>How to Use Book AI Assistant</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>                <div class="modal-body">
+                </div><div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <h6 style="color: black;"><i class="fas fa-upload me-2" style="color: var(--primary-color);"></i>Upload a Book</h6>
