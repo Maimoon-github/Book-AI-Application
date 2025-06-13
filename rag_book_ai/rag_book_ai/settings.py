@@ -23,12 +23,16 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l4zb-al(%usl0p@&1+4i*my@f%n!hd$pd4q6s2*%l*y+b79vdd'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-l4zb-al(%usl0p@&1+4i*my@f%n!hd$pd4q6s2*%l*y+b79vdd')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# For Docker containers
+if os.getenv('DOCKER_ENV'):
+    ALLOWED_HOSTS.extend(['web', '0.0.0.0'])
 
 
 # Application definition
@@ -124,6 +128,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional static files directories
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
@@ -148,3 +158,12 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
+
+# Security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

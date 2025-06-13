@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - DOCKER_ENV=true
+    volumes:
+      - ./media:/app/media
+      - ./db.sqlite3:/app/db.sqlite3
+    restart: unless-stopped
+    networks:
+      - bookai-network
+
+networks:
+  bookai-network:
+    driver: bridge

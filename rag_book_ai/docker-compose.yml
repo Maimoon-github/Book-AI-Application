@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./media:/app/media
+      - ./db.sqlite3:/app/db.sqlite3
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - bookai-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - bookai-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./media:/app/media:ro
+      - ./static:/app/static:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+    networks:
+      - bookai-network
+
+volumes:
+  redis_data:
+
+networks:
+  bookai-network:
+    driver: bridge
