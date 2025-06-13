@@ -2,35 +2,35 @@
 {% load math_filters %}
 
 {% block content %}
-<div class="container mt-4">
-    <!-- Hero section -->
-    <div class="row align-items-center mb-5 py-4">
-        <div class="col-lg-6">            <h1 class="display-4 fw-bold mb-3">Book AI <span style="color: black;">Assistant</span></h1>
-            <p class="lead mb-4" style="color: black;">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
-            <div class="d-flex gap-3">
-                <a href="#upload-section" class="btn btn-primary btn-lg px-4">
-                    <i class="fas fa-upload me-2"></i>Upload a Book
+<div class="container mt-4">    <!-- Hero section - more compact -->
+    <div class="row align-items-center mb-4 py-3">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold mb-2">Book AI <span>Assistant</span></h1>
+            <p class="lead mb-3">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
+            <div class="d-flex gap-2">
+                <a href="#upload-section" class="btn btn-primary px-3">
+                    <i class="fas fa-upload me-1"></i>Upload a Book
                 </a>
-                <a href="#books-library" class="btn btn-outline-secondary btn-lg px-4">
-                    <i class="fas fa-book me-2"></i>Browse Library
+                <a href="#books-library" class="btn btn-outline-secondary px-3">
+                    <i class="fas fa-book me-1"></i>Browse Library
                 </a>
             </div>
         </div>        <div class="col-lg-6 d-none d-lg-block">
             <div class="text-center">
-                <img src="/media/profile_pics/Logo.png" alt="Book AI Illustration" class="img-fluid rounded shadow-lg" style="max-height: 300px;">
-                <div class="mt-3">
-                    <h4 style="color: black;">Your Personal Book Assistant</h4>
+                <img src="/media/profile_pics/Logo.png" alt="Book AI Illustration" class="img-fluid rounded shadow" style="max-height: 250px;">
+                <div class="mt-2">
+                    <h4>Your Personal Book Assistant</h4>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="row mb-5" id="upload-section">
+      <div class="row mb-4" id="upload-section">
         <div class="col-lg-6">
             <!-- API Key Settings -->
-            <div class="card mb-4 border-0 shadow-sm">                <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0" style="color: black;">
-                        <i class="fas fa-cogs me-2" style="color: black;"></i>AI Settings
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-header bg-white py-2">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cogs me-1"></i>AI Settings
                     </h5>
                 </div>
                 <div class="card-body">

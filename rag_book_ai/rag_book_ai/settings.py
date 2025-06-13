@@ -28,11 +28,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-l4zb-al(%usl0p@&1+4i*my@f%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.100.9,*').split(',')
 
 # For Docker containers
 if os.getenv('DOCKER_ENV'):
     ALLOWED_HOSTS.extend(['web', '0.0.0.0'])
+
+# Allow network access (add your IP and wildcard for development)
+ALLOWED_HOSTS.extend(['192.168.100.9', '*'])
 
 
 # Application definition
