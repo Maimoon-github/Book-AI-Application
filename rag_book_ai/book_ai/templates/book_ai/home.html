@@ -85,14 +85,23 @@
                 </div>
                 <div class="card-body">
                     <form id="upload-form" method="POST" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="mb-4">
+                        {% csrf_token %}                        <div class="mb-4">
                             <label for="pdf-file" class="form-label fw-medium">Select PDF Book</label>
                             <div class="input-group mb-3">
                                 <input type="file" class="form-control" name="pdf_file" id="pdf-file" accept=".pdf" required>
                                 <label class="input-group-text" for="pdf-file"><i class="fas fa-file-pdf"></i></label>
                             </div>
                             <div class="form-text" style="color: black;">Maximum file size: 50MB. Supported format: PDF</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="custom-title" class="form-label fw-medium">Custom Book Title (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-bookmark"></i></span>
+                                <input type="text" class="form-control" name="custom_title" id="custom-title" 
+                                       placeholder="Enter a custom title for your book">
+                            </div>
+                            <div class="form-text" style="color: black;">Leave blank to use the original book title from the PDF</div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-2">
                             <i class="fas fa-cloud-upload-alt me-2"></i>Upload and Process
@@ -115,7 +124,7 @@
             <div class="d-flex justify-content-between align-items-center p-3 rounded-3" 
                  style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);">
                 <div>
-                    <h2 class="fw-bold mb-1" style="color: var(--text-dark); font-size: 1.5rem;">
+                    <h2 class="fw-bold mb-1" style="color: #000000; font-size: 1.5rem;">
                         <i class="fas fa-book-open me-2 text-primary"></i>Your Book Library
                     </h2>
                     <small class="text-muted">Manage and explore your collection</small>
@@ -250,7 +259,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content glass-modal">
             <div class="modal-header border-0">
-                <h5 class="modal-title" id="bookInfoModalLabel" style="color: var(--text-dark);">
+                <h5 class="modal-title" id="bookInfoModalLabel" style="color: #000000;">
                     <i class="fas fa-info-circle text-primary me-2"></i>Book Information
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -301,7 +310,7 @@
     <div class="modal-dialog">
         <div class="modal-content glass-modal">
             <div class="modal-header border-0">
-                <h5 class="modal-title" id="bookSettingsModalLabel" style="color: var(--text-dark);">
+                <h5 class="modal-title" id="bookSettingsModalLabel" style="color: #000000;">
                     <i class="fas fa-cog text-primary me-2"></i>Book Settings
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -337,6 +346,30 @@
 
 <!-- Enhanced Styles for Modern Library -->
 <style>
+/* Color Palette Variables - Based on Theme/Palette.svg */
+:root {
+    --primary-color: #e1732a;       /* Main orange */
+    --secondary-color: #e68a4c;     /* Light orange */
+    --tertiary-color: #eca474;      /* Lighter orange */
+    --quaternary-color: #f1bf9d;    /* Pale orange */
+    --quinary-color: #f7d9c5;       /* Very light orange */
+    --senary-color: #fdf3ed;        /* Lightest orange */
+      /* Text Colors */
+    --text-dark: #000000;           /* Pure black for all text */
+    --text-light: #000000;          /* Black for secondary text */
+    --text-muted: #000000;          /* Black for muted text */
+    
+    /* Background Colors */
+    --bg-gradient-start: #e1732a;
+    --bg-gradient-end: #f7d9c5;
+    
+    /* UI Colors */
+    --glass-bg: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --shadow-light: rgba(0, 0, 0, 0.1);
+    --shadow-medium: rgba(0, 0, 0, 0.15);
+}
+
 /* Glassmorphism Effects */
 .glass-card {
     background: rgba(255, 255, 255, 0.25);
@@ -360,6 +393,77 @@
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(225, 115, 42, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+/* Custom Title Input Enhancement */
+#custom-title {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+#custom-title:focus {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(225, 115, 42, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+/* Upload Form Enhancement */
+.form-control, .form-select {
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(225, 115, 42, 0.25);
+}
+
+/* Animation for notifications */
+.fade-in {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ensure all text is black */
+.text-dark, .text-muted, .text-light, 
+h1, h2, h3, h4, h5, h6, p, span, div, 
+.card-title, .card-text, .form-label, 
+.dropdown-item, .btn, .modal-title, 
+.modal-body, .list-group-item, .badge,
+.toast-body, .alert, .form-text,
+.info-label, .info-value, .stat-label,
+.book-title-modern, .empty-title, .empty-description {
+    color: #000000 !important;
+}
+
+/* Specific overrides for better contrast */
+.btn-primary, .btn-success, .btn-danger, .btn-warning, .btn-info {
+    color: #ffffff !important;
+}
+
+.text-white, .toast .text-white {
+    color: #ffffff !important;
 }
 
 .glass-dropdown {
@@ -727,6 +831,48 @@ $(document).ready(function() {
         } else {
             input.attr('type', 'password');
             icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });    // File upload with custom title auto-population
+    $('#pdf-file').on('change', function() {
+        const file = this.files[0];
+        const customTitleInput = $('#custom-title');
+        
+        if (file) {
+            // Extract filename without extension as suggested title
+            const fileName = file.name.replace(/\.[^/.]+$/, "");
+            const suggestedTitle = fileName.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            // Only populate if the field is empty
+            if (!customTitleInput.val().trim()) {
+                customTitleInput.val(suggestedTitle);
+                
+                // Add a subtle highlight animation
+                customTitleInput.addClass('bg-warning bg-opacity-25');
+                setTimeout(() => {
+                    customTitleInput.removeClass('bg-warning bg-opacity-25');
+                }, 1500);
+                
+                // Show a subtle notification
+                const notification = $(`
+                    <small class="text-muted d-block mt-1 fade-in" id="title-suggestion">
+                        <i class="fas fa-magic me-1 text-primary"></i>
+                        Auto-filled from filename. You can edit this title.
+                    </small>
+                `);
+                
+                // Remove any existing notification
+                $('#title-suggestion').remove();
+                
+                // Add new notification
+                customTitleInput.parent().after(notification);
+                
+                // Remove notification after 3 seconds
+                setTimeout(() => {
+                    notification.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                }, 3000);
+            }
         }
     });
     
