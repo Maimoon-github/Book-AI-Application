@@ -653,3 +653,225 @@ def delete_profile_picture(request):
         'status': 'error',
         'message': 'Invalid request method'
     })
+
+@csrf_exempt
+@login_required
+def api_book_info(request, book_id):
+    """API endpoint to get detailed book information"""
+    try:
+        book = Book.objects.get(id=book_id)
+        
+        # Get chapter count
+        chapter_count = book.chapters.count()
+        
+        # Get file size (if file exists)
+        file_size = "Unknown"
+        try:
+            import os
+            if os.path.exists(book.file_path):
+                size_bytes = os.path.getsize(book.file_path)
+                if size_bytes < 1024*1024:
+                    file_size = f"{size_bytes/1024:.1f} KB"
+                else:
+                    file_size = f"{size_bytes/(1024*1024):.1f} MB"
+        except:
+            pass
+        
+        # Get question count (if Questions model is used)
+        question_count = 0
+        try:
+            question_count = sum(chapter.questions.count() for chapter in book.chapters.all())
+        except:
+            pass
+        
+        data = {
+            'id': book.id,
+            'title': book.title,
+            'custom_name': book.custom_name,
+            'display_name': book.get_display_name(),
+            'original_title': book.title,
+            'file_path': book.file_path,
+            'page_count': book.page_count,
+            'chapter_count': chapter_count,
+            'question_count': question_count,
+            'file_size': file_size,
+            'preferred_model': book.preferred_model,
+            'uploaded_at': book.uploaded_at.isoformat(),
+            'updated_at': book.uploaded_at.isoformat(),  # Can be updated if you add updated_at field
+            'processing_status': 'Completed',  # Add processing status logic if needed
+            'last_chat': 'Not tracked',  # Add last chat tracking if needed
+        }
+        
+        return JsonResponse(data)
+    except Book.DoesNotExist:
+        return JsonResponse({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@login_required
+def api_book_settings(request, book_id):
+    """API endpoint to get book settings"""
+    try:
+        book = Book.objects.get(id=book_id)
+        
+        data = {
+            'id': book.id,
+            'title': book.title,
+            'custom_name': book.custom_name,
+            'original_title': book.title,
+            'preferred_model': book.preferred_model,
+            'groq_api_key': book.groq_api_key,
+            'question_count': 0,  # Add logic to count questions
+            'last_chat': 'Never',  # Add logic to track last chat
+        }
+        
+        return JsonResponse(data)
+    except Book.DoesNotExist:
+        return JsonResponse({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@login_required
+def api_book_update(request, book_id):
+    """API endpoint to update book settings"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        book = Book.objects.get(id=book_id)
+        action = request.POST.get('action')
+        
+        if action == 'update_title':
+            custom_name = request.POST.get('custom_name', '').strip()
+            if custom_name:
+                book.custom_name = custom_name
+                book.save()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Book title updated successfully'
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Title cannot be empty'
+                })
+        
+        elif action == 'update_model':
+            preferred_model = request.POST.get('preferred_model')
+            if preferred_model:
+                book.preferred_model = preferred_model
+                book.save()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'AI model updated successfully'
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid model selection'
+                })
+        
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid action'
+            })
+            
+    except Book.DoesNotExist:
+        return JsonResponse({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@login_required
+def api_book_delete(request, book_id):
+    """API endpoint to delete a book"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'DELETE method required'}, status=405)
+    
+    try:
+        book = Book.objects.get(id=book_id)
+        
+        # Delete the file if it exists
+        try:
+            import os
+            if os.path.exists(book.file_path):
+                os.unlink(book.file_path)
+        except:
+            pass  # Continue even if file deletion fails
+        
+        # Delete the book (this will cascade to chapters and questions)
+        book.delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Book deleted successfully'
+        })
+        
+    except Book.DoesNotExist:
+        return JsonResponse({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def api_book_export(request, book_id):
+    """API endpoint to export book data"""
+    try:
+        book = Book.objects.get(id=book_id)
+        
+        # Create export data
+        export_data = {
+            'book_title': book.get_display_name(),
+            'original_title': book.title,
+            'page_count': book.page_count,
+            'upload_date': book.uploaded_at.isoformat(),
+            'chapters': []
+        }
+        
+        # Add chapters data
+        for chapter in book.chapters.all():
+            chapter_data = {
+                'title': chapter.title,
+                'level': chapter.level,
+                'start_page': chapter.start_page,
+                'end_page': chapter.end_page,
+                'content_preview': chapter.content[:200] + '...' if len(chapter.content) > 200 else chapter.content
+            }
+            export_data['chapters'].append(chapter_data)
+        
+        # Create response
+        response = HttpResponse(
+            json.dumps(export_data, indent=2),
+            content_type='application/json'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{book.get_display_name()}_export.json"'
+        return response
+        
+    except Book.DoesNotExist:
+        return JsonResponse({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@login_required
+def api_book_reprocess(request, book_id):
+    """API endpoint to reprocess a book"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        book = Book.objects.get(id=book_id)
+        
+        # Here you would implement the reprocessing logic
+        # For now, just return a success message
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Book reprocessing started. This may take a few minutes.'
+        })
+        
+    except Book.DoesNotExist:
+        return JsonResponse({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

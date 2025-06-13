@@ -488,6 +488,44 @@ let currentChapterId = '';
 let currentChapterTitle = 'All Chapters';
 let questionCount = 0;
 
+// Handle quick question from home page
+$(document).ready(function() {
+    const quickQuestion = sessionStorage.getItem('quickQuestion');
+    if (quickQuestion) {
+        // Set the question in the input field
+        $('#question-input').val(quickQuestion);
+        
+        // Clear from sessionStorage
+        sessionStorage.removeItem('quickQuestion');
+        
+        // Focus on the question input and scroll to it
+        $('#question-input').focus();
+        $('html, body').animate({
+            scrollTop: $('#chat-section').offset().top - 100
+        }, 500);
+        
+        // Show a small notification
+        showQuickNotification('Quick question loaded!', 'info');
+    }
+});
+
+function showQuickNotification(message, type = 'info') {
+    const bgClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    const alert = `
+        <div class="alert ${bgClass} alert-dismissible fade show" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 1050; min-width: 250px;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    $('body').append(alert);
+    
+    // Auto dismiss after 3 seconds
+    setTimeout(() => {
+        $('.alert').alert('close');
+    }, 3000);
+}
+
 function selectChapter(event, chapterId, chapterTitle) {
     event.preventDefault();
     currentChapterId = chapterId;

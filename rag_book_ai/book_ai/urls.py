@@ -20,4 +20,12 @@ urlpatterns = [
     path('update-api-settings/', views.update_api_settings, name='update_api_settings'),
     path('rate-response/', views.rate_response, name='rate_response'),
     path('submit-feedback/', views.submit_feedback, name='submit_feedback'),
+    
+    # Enhanced API endpoints
+    path('api/book-info/<int:book_id>/', views.api_book_info, name='api_book_info'),
+    path('api/book-settings/<int:book_id>/', views.api_book_settings, name='api_book_settings'),
+    path('api/book-update/<int:book_id>/', views.api_book_update, name='api_book_update'),
+    path('api/book-delete/<int:book_id>/', views.api_book_delete, name='api_book_delete'),
+    path('api/book-export/<int:book_id>/', views.api_book_export, name='api_book_export'),
+    path('api/book-reprocess/<int:book_id>/', views.api_book_reprocess, name='api_book_reprocess'),
 ]

@@ -726,8 +726,7 @@
             
             h2 {
                 font-size: 1.5rem;
-            }
-            
+            }            
             h3 {
                 font-size: 1.25rem;
             }
@@ -736,6 +735,143 @@
                 padding-left: 10px;
                 padding-right: 10px;
             }
+        }
+        
+        /* Enhanced Book Card Styles */
+        .book-card {
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+        }
+        
+        .hover-shadow {
+            transition: all 0.3s ease;
+        }
+        
+        .hover-shadow:hover {
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+        }
+        
+        /* Gradient header for book cards */
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        /* Enhanced buttons */
+        .btn-outline-info:hover {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+        
+        .btn-outline-success:hover {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        
+        .btn-outline-warning:hover {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+        
+        /* Book stats styling */
+        .book-card .bg-light {
+            background-color: #f8f9fa !important;
+            transition: all 0.2s ease;
+        }
+        
+        .book-card:hover .bg-light {
+            background-color: #e9ecef !important;
+        }
+        
+        /* Custom badge styling */
+        .badge {
+            font-size: 0.75em;
+        }
+        
+        /* Modal enhancements */
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        /* Toast notifications */
+        .toast {
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        /* Info items in modals */
+        .info-item {
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .info-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Loading and progress bars */
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .progress-bar {
+            border-radius: 4px;
+        }
+        
+        /* Search and filter improvements */
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(225, 115, 42, 0.25);
+        }
+        
+        /* Book library header */
+        .book-library-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        
+        /* Responsive book grid */
+        @media (max-width: 576px) {
+            .book-card .btn-group .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.8rem;
+            }
+            
+            .book-card .btn-group span {
+                display: none !important;
+            }
+        }
+        
+        /* Empty state styling */
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
         }
     </style>
 </head>
