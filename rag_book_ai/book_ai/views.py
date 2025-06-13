@@ -6,8 +6,12 @@ from .forms import SignUpForm, LoginForm, UserProfileForm, UserEditForm
 import os
 import tempfile
 from .utils.pdf_processor import PDFProcessor
-# TODO: Switch to enhanced processor after fixing import issues
-# from .utils.enhanced_pdf_processor import EnhancedPDFProcessor
+# Try to import enhanced processor, fall back to basic if dependencies missing
+try:
+    from .utils.enhanced_pdf_processor import EnhancedPDFProcessor
+    ENHANCED_PROCESSOR_AVAILABLE = True
+except ImportError:
+    ENHANCED_PROCESSOR_AVAILABLE = False
 # Using the improved RAG implementation for better chunking
 from .utils.improved_book_teaching_rag import BookTeachingRAG
 from django.views.decorators.csrf import csrf_exempt
@@ -103,14 +107,38 @@ def upload_book(request):
         pdf_file = request.FILES['pdf_file']
         custom_name = request.POST.get('book_name', '').strip()
         
-        # Save the file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            for chunk in pdf_file.chunks():
-                tmp_file.write(chunk)
-            temp_file_path = tmp_file.name
+        # Validate file size (50MB limit)
+        max_size = 50 * 1024 * 1024  # 50MB in bytes
+        if pdf_file.size > max_size:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'File size exceeds 50MB limit. Please upload a smaller file.'
+            })
         
-        try:            # Process the PDF with original processor (temporarily)
-            processor = PDFProcessor(temp_file_path)
+        # Validate file type
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Only PDF files are supported.'
+            })
+          # Save the file temporarily
+        temp_file_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                for chunk in pdf_file.chunks():
+                    tmp_file.write(chunk)
+                temp_file_path = tmp_file.name
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Failed to save uploaded file: {str(e)}'            })
+        
+        try:
+            # Use enhanced processor if available, otherwise fall back to basic
+            if ENHANCED_PROCESSOR_AVAILABLE:
+                processor = EnhancedPDFProcessor(temp_file_path)
+            else:
+                processor = PDFProcessor(temp_file_path)
             result = processor.process_pdf()
             
             if result:

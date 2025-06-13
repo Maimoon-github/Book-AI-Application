@@ -1,0 +1,31 @@
+# Complete requirements for Book AI Application
+# Core dependencies
+django>=4.2
+streamlit>=1.28.0
+PyMuPDF>=1.23.8
+pandas>=2.1.4
+numpy>=1.26.3
+
+# RAG and AI dependencies
+langchain-groq>=0.0.3
+chromadb>=0.4.22
+sentence-transformers>=2.3.1
+langgraph>=0.0.11
+langchain-core>=0.1.13
+typing-extensions>=4.9.0
+
+# Additional dependencies
+pillow>=10.0.0
+requests>=2.31.0
+python-multipart>=0.0.6
+uvicorn>=0.24.0
+fastapi>=0.104.0
+
+# Development dependencies
+pytest>=7.4.0
+black>=23.9.0
+flake8>=6.1.0
+
+# Web dependencies
+gunicorn>=21.2.0
+whitenoise>=6.6.0

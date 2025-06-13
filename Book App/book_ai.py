@@ -4,8 +4,16 @@ import re
 import tempfile
 import warnings
 from typing import List, Dict, Tuple, Optional, Any, Sequence
-import pandas as pd
-import fitz  # PyMuPDF
+
+# Check core dependencies
+try:
+    import pandas as pd
+    import fitz  # PyMuPDF
+    CORE_DEPS_AVAILABLE = True
+except ImportError as e:
+    CORE_DEPS_AVAILABLE = False
+    st.error(f"Missing core dependencies: {e}")
+    st.stop()
 
 # Suppress specific PyTorch warnings that are harmless in Streamlit context
 warnings.filterwarnings("ignore", message=".*torch.classes.*")

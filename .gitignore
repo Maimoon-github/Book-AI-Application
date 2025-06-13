@@ -163,7 +163,7 @@ tmp/
 *.temp
 
 # Large PDF files (optional - you might want to keep some)
-# *.pdf
+*.pdf
 
 # API keys and sensitive data
 .env.local
