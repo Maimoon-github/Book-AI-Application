@@ -6,10 +6,9 @@
     <div class="row">
         <!-- Sidebar -->
         <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">{{ book.title }}</h5>
-                    <p class="text-muted">{{ book.page_count }} pages</p>
+            <div class="card">                <div class="card-body">
+                    <h5 class="card-title" style="color: black;">{{ book.title }}</h5>
+                    <p style="color: black;">{{ book.page_count }} pages</p>
                     
                     <!-- API Settings -->
                     <div class="mb-3">
@@ -18,20 +17,18 @@
                         </button>
                     </div>
                       <!-- Enhanced TOC Section -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">
-                                <i class="fas fa-list-alt me-1"></i>Table of Contents
+                    <div class="mb-3">                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0" style="color: black;">
+                                <i class="fas fa-list-alt me-1" style="color: var(--primary-color);"></i>Table of Contents
                             </h6>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-cog"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#" onclick="expandAllTOC()"><i class="fas fa-expand-arrows-alt me-1"></i>Expand All</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="collapseAllTOC()"><i class="fas fa-compress-arrows-alt me-1"></i>Collapse All</a></li>
+                                </button>                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="expandAllTOC()" style="color: black;"><i class="fas fa-expand-arrows-alt me-1" style="color: var(--primary-color);"></i>Expand All</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="collapseAllTOC()" style="color: black;"><i class="fas fa-compress-arrows-alt me-1" style="color: var(--primary-color);"></i>Collapse All</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" onclick="showTOCStats()"><i class="fas fa-chart-bar me-1"></i>TOC Statistics</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showTOCStats()" style="color: black;"><i class="fas fa-chart-bar me-1" style="color: var(--primary-color);"></i>TOC Statistics</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -47,18 +44,17 @@
                             </div>
                         </div>
                         
-                        <!-- TOC Statistics (collapsible) -->
-                        <div class="collapse" id="tocStats">
-                            <div class="card card-body mb-2" style="background: #f8f9fa; border: 1px solid #e9ecef;">
+                        <!-- TOC Statistics (collapsible) -->                        <div class="collapse" id="tocStats">
+                            <div class="card card-body mb-2" style="background: var(--lightest-bg); border: 1px solid var(--lighter-accent);">
                                 <div class="row text-center">
                                     <div class="col-6">
                                         <div class="border-end">
-                                            <strong class="text-primary">{{ toc_stats.total_chapters }}</strong>
-                                            <small class="d-block text-muted">Chapters</small>
+                                            <strong style="color: var(--primary-color);">{{ toc_stats.total_chapters }}</strong>
+                                            <small class="d-block" style="color: black;">Chapters</small>
                                         </div>
                                     </div>
                                     <div class="col-6">
-                                        <strong class="text-success">{{ toc_stats.max_depth }}</strong>
+                                        <strong style="color: var(--primary-color);">{{ toc_stats.max_depth }}</strong>
                                         <small class="d-block text-muted">Max Depth</small>
                                     </div>
                                 </div>

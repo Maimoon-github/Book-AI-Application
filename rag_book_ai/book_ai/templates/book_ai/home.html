@@ -5,9 +5,8 @@
 <div class="container mt-4">
     <!-- Hero section -->
     <div class="row align-items-center mb-5 py-4">
-        <div class="col-lg-6">
-            <h1 class="display-4 fw-bold mb-3">Book AI <span class="text-primary">Assistant</span></h1>
-            <p class="lead text-muted mb-4">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
+        <div class="col-lg-6">            <h1 class="display-4 fw-bold mb-3">Book AI <span style="color: black;">Assistant</span></h1>
+            <p class="lead mb-4" style="color: black;">Transform your reading experience with AI-powered insights, summaries, and interactive learning from any book.</p>
             <div class="d-flex gap-3">
                 <a href="#upload-section" class="btn btn-primary btn-lg px-4">
                     <i class="fas fa-upload me-2"></i>Upload a Book
@@ -16,10 +15,12 @@
                     <i class="fas fa-book me-2"></i>Browse Library
                 </a>
             </div>
-        </div>
-        <div class="col-lg-6 d-none d-lg-block">
+        </div>        <div class="col-lg-6 d-none d-lg-block">
             <div class="text-center">
-                <img src="https://cdn.pixabay.com/photo/2018/01/17/20/22/analytics-3088958_960_720.png" alt="Book AI Illustration" class="img-fluid rounded shadow-lg" style="max-height: 300px;">
+                <img src="/media/profile_pics/Logo.png" alt="Book AI Illustration" class="img-fluid rounded shadow-lg" style="max-height: 300px;">
+                <div class="mt-3">
+                    <h4 style="color: black;">Your Personal Book Assistant</h4>
+                </div>
             </div>
         </div>
     </div>
@@ -27,10 +28,9 @@
     <div class="row mb-5" id="upload-section">
         <div class="col-lg-6">
             <!-- API Key Settings -->
-            <div class="card mb-4 border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-cogs me-2 text-primary"></i>AI Settings
+            <div class="card mb-4 border-0 shadow-sm">                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0" style="color: black;">
+                        <i class="fas fa-cogs me-2" style="color: black;"></i>AI Settings
                     </h5>
                 </div>
                 <div class="card-body">
@@ -45,7 +45,7 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
-                            <small class="text-muted">Get a free API key from <a href="https://console.groq.com/" target="_blank" class="text-decoration-none">console.groq.com</a></small>
+                            <small style="color: black;">Get a free API key from <a href="https://console.groq.com/" target="_blank" class="text-decoration-none" style="color: black;">console.groq.com</a></small>
                         </div>
                         <div class="mb-3">
                             <label for="model-select" class="form-label fw-medium">AI Model</label>
@@ -66,7 +66,7 @@
                                     Mistral Saba 24B
                                 </option>
                             </select>
-                            <div class="form-text">Choose faster models for quicker responses or higher quality for complex questions.</div>
+                            <div class="form-text" style="color: black;">Choose faster models for quicker responses or higher quality for complex questions.</div>
                         </div>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-2"></i>Save Settings
@@ -78,10 +78,9 @@
         
         <div class="col-lg-6">
             <!-- Upload Form -->
-            <div class="card mb-4 border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-upload me-2 text-primary"></i>Upload a Book
+            <div class="card mb-4 border-0 shadow-sm">                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0" style="color: black;">
+                        <i class="fas fa-upload me-2" style="color: black;"></i>Upload a Book
                     </h5>
                 </div>
                 <div class="card-body">
@@ -93,7 +92,7 @@
                                 <input type="file" class="form-control" name="pdf_file" id="pdf-file" accept=".pdf" required>
                                 <label class="input-group-text" for="pdf-file"><i class="fas fa-file-pdf"></i></label>
                             </div>
-                            <div class="form-text">Maximum file size: 50MB. Supported format: PDF</div>
+                            <div class="form-text" style="color: black;">Maximum file size: 50MB. Supported format: PDF</div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-2">
                             <i class="fas fa-cloud-upload-alt me-2"></i>Upload and Process
