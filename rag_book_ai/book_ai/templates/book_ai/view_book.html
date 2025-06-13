@@ -2,20 +2,45 @@
 {% load math_filters %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <!-- Sidebar - more compact -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body compact-p">
-                    <h5 class="card-title compact-mb">{{ book.title }}</h5>
-                    <p class="compact-mb">{{ book.page_count }} pages</p>
+<div class="container-fluid">
+    <!-- Mobile Header with Toggle -->
+    <div class="d-md-none bg-white border-bottom p-3 sticky-top">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 text-truncate flex-grow-1 me-2">{{ book.get_display_name }}</h6>
+            <button class="btn btn-sm btn-outline-primary" type="button" id="mobile-sidebar-toggle">
+                <i class="fas fa-bars"></i> Contents
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-0">
+        <!-- Collapsible Sidebar -->
+        <div class="col-md-3" id="sidebar-wrapper">
+            <!-- Mobile Overlay -->
+            <div class="d-md-none mobile-sidebar-overlay" id="mobile-overlay"></div>
+            
+            <div class="sidebar-content bg-white" id="sidebar">
+                <!-- Mobile Close Button -->
+                <div class="d-md-none p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Table of Contents</h6>
+                        <button class="btn btn-sm btn-outline-secondary" id="mobile-sidebar-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-3">
+                    <div class="d-none d-md-block mb-3">
+                        <h5 class="card-title mb-1">{{ book.get_display_name }}</h5>
+                        <p class="text-muted small mb-0">{{ book.page_count }} pages</p>
+                    </div>
                       <!-- API Settings -->
-                    <div class="compact-mb">
+                    <div class="mb-3">
                         <button class="btn btn-sm btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#apiSettingsModal">
                             <i class="fas fa-cogs"></i> AI Settings
                         </button>
-                    </div>                    <!-- Enhanced TOC Section -->
+                    </div><!-- Enhanced TOC Section -->
                     <div class="compact-mb">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <h6 class="mb-0">
@@ -73,15 +98,15 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Enhanced Hierarchical TOC -->
-                    <div class="toc-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; background: #fff;">
-                        <div class="list-group list-group-flush" id="toc-list">
+                      <!-- Enhanced Hierarchical TOC -->
+                    <div class="toc-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; background: #fff; position: relative; z-index: 1;">
+                        <div class="list-group list-group-flush" id="toc-list" style="pointer-events: auto;">
                             <!-- All Chapters Option -->
                             <a href="#" class="list-group-item list-group-item-action toc-item" 
                                data-chapter-id="" 
                                data-level="0"
-                               onclick="selectChapter(event, '', 'All Chapters')">
+                               onclick="selectChapter(event, '', 'All Chapters')"
+                               style="cursor: pointer; user-select: none;">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <i class="fas fa-book text-primary me-2"></i>
@@ -91,8 +116,7 @@
                                 </div>
                             </a>
                             
-                            <!-- Dynamic TOC Structure -->
-                            {% for chapter in toc_structure %}
+                            <!-- Dynamic TOC Structure -->                            {% for chapter in toc_structure %}
                                 <div class="toc-chapter-group" data-level="{{ chapter.level }}">
                                     <a href="#" class="list-group-item list-group-item-action toc-item" 
                                        data-chapter-id="{{ chapter.id }}"
@@ -100,11 +124,12 @@
                                        data-title="{{ chapter.title }}"
                                        data-start-page="{{ chapter.start_page }}"
                                        data-end-page="{{ chapter.end_page }}"
-                                       onclick="selectChapter(event, {{ chapter.id }}, '{{ chapter.title }}')">
+                                       onclick="selectChapter(event, {{ chapter.id }}, '{{ chapter.title }}'); return false;"
+                                       style="cursor: pointer; user-select: none; position: relative; z-index: 2;">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div class="toc-content" style="margin-left: {% with level_minus_one=chapter.level|add:'-1' %}{{ level_minus_one|mul:'20' }}{% endwith %}px;">
                                                 {% if chapter.children %}
-                                                    <i class="fas fa-chevron-right toc-toggle me-2" onclick="toggleTOCSection(event, this)"></i>
+                                                    <i class="fas fa-chevron-right toc-toggle me-2" onclick="toggleTOCSection(event, this); event.stopPropagation();" style="cursor: pointer;"></i>
                                                 {% else %}
                                                     <i class="fas fa-file-alt text-muted me-2"></i>
                                                 {% endif %}
@@ -123,8 +148,7 @@
                                             </div>
                                         </div>
                                     </a>
-                                    
-                                    <!-- Children (initially collapsed) -->
+                                      <!-- Children (initially collapsed) -->
                                     {% if chapter.children %}
                                         <div class="toc-children collapse">
                                             {% for child in chapter.children %}
@@ -134,7 +158,8 @@
                                                    data-title="{{ child.title }}"
                                                    data-start-page="{{ child.start_page }}"
                                                    data-end-page="{{ child.end_page }}"
-                                                   onclick="selectChapter(event, {{ child.id }}, '{{ child.title }}')">
+                                                   onclick="selectChapter(event, {{ child.id }}, '{{ child.title }}'); return false;"
+                                                   style="cursor: pointer; user-select: none; position: relative; z-index: 2;">
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <div class="toc-content" style="margin-left: {% with level_minus_one=child.level|add:'-1' %}{{ level_minus_one|mul:'20' }}{% endwith %}px;">
                                                             <i class="fas fa-circle text-secondary me-2" style="font-size: 6px; vertical-align: middle;"></i>
@@ -156,117 +181,84 @@
                                     {% endif %}
                                 </div>
                             {% endfor %}
-                        </div>
-                    </div>
-                      <!-- Frequent Questions -->
-                    <div id="frequent-questions" class="mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">
-                                <i class="fas fa-fire text-warning me-1"></i>Popular Questions
-                            </h6>
-                            <small class="text-muted" id="question-count">0 questions</small>
-                        </div>
-                        <div id="questions-list" class="mt-2">
-                            <div class="text-center text-muted py-4">
-                                <i class="fas fa-question-circle fa-2x mb-2 text-muted"></i>
-                                <p class="mb-1">Select a chapter to see popular questions</p>
-                                <small>Questions from other learners will appear here</small>
-                            </div>
-                        </div>
-                    </div>
+                        </div>                    </div>
                 </div>
             </div>
         </div>
         
         <!-- Main Content -->
         <div class="col-md-9">
-            <div class="card">
-                <div class="card-body">                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+            <div class="content-wrapper">
+                <div class="p-3">                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                         <div class="d-flex align-items-center">
-                            <h5 id="current-chapter" class="mb-0 me-3">All Chapters</h5>
-                            <span id="chapter-badge" class="badge bg-primary">General</span>
+                            <h6 id="current-chapter" class="mb-0 me-2">All Chapters</h6>
+                            <span id="chapter-badge" class="badge bg-primary small">General</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span id="question-counter" class="badge bg-secondary">0 questions asked</span>
+                            <span id="question-counter" class="badge bg-secondary small">0 questions</span>
                             <button class="btn btn-outline-danger btn-sm" onclick="clearChat()" title="Clear conversation">
-                                <i class="fas fa-trash"></i> Clear
+                                <i class="fas fa-trash"></i> <span class="d-none d-sm-inline">Clear</span>
                             </button>
                         </div>
-                    </div>                      <!-- Chat Area -->
-                    <div id="chat-messages" class="mb-4" style="height: 450px; overflow-y: auto; border: 2px solid #e9ecef; border-radius: 15px; padding: 1.5rem; background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);">
-                        <div class="text-center text-muted mt-5" id="welcome-message">
-                            <div class="mb-4">
-                                <i class="fas fa-robot fa-4x text-primary mb-3" style="opacity: 0.7;"></i>
-                                <h4 class="text-primary">Welcome to Your AI Tutor!</h4>
-                                <p class="lead">Ready to explore "{{ book.title }}"?</p>
+                    </div>                      <!-- Compact Chat Area -->
+                    <div id="chat-messages" class="mb-3" style="height: 350px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 10px; padding: 1rem; background: #f8f9fa;">
+                        <div class="text-center text-muted mt-3" id="welcome-message">
+                            <div class="mb-3">
+                                <i class="fas fa-robot fa-3x text-primary mb-2" style="opacity: 0.7;"></i>
+                                <h5 class="text-primary mb-1">AI Study Assistant</h5>
+                                <p class="small">Ready to explore "{{ book.title }}"?</p>
                             </div>
-                            <div class="row">
-                                <div class="col-md-6 offset-md-3">
-                                    <div class="card border-0 bg-white shadow-sm">
-                                        <div class="card-body p-3">
-                                            <h6 class="card-title text-primary">
-                                                <i class="fas fa-graduation-cap me-1"></i>How I can help:
-                                            </h6>
-                                            <ul class="list-unstyled mb-0 text-start">
-                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Explain complex concepts</li>
-                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Summarize chapters</li>
-                                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Answer specific questions</li>
-                                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Provide learning guidance</li>
-                                            </ul>
-                                        </div>
+                            <div class="card border-0 bg-white shadow-sm mx-auto" style="max-width: 300px;">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-primary small mb-2">
+                                        <i class="fas fa-graduation-cap me-1"></i>I can help you:
+                                    </h6>
+                                    <div class="text-start small">
+                                        <div class="mb-1"><i class="fas fa-check text-success me-1"></i>Explain concepts</div>
+                                        <div class="mb-1"><i class="fas fa-check text-success me-1"></i>Summarize chapters</div>
+                                        <div class="mb-1"><i class="fas fa-check text-success me-1"></i>Answer questions</div>
+                                        <div><i class="fas fa-check text-success me-1"></i>Provide guidance</div>
                                     </div>
                                 </div>
                             </div>
-                            <p class="mt-3">
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Select a specific chapter for targeted questions, or use "All Chapters" for general inquiries.
-                                </small>
+                            <p class="mt-2 small text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select a chapter for focused answers
                             </p>
                         </div>
-                    </div><!-- Input Area -->
-                    <div class="card border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
-                        <div class="card-body p-4">
-                            <div class="row align-items-end">
-                                <div class="col">
-                                    <div class="mb-2">
-                                        <label for="question-input" class="form-label text-white fw-bold">
-                                            <i class="fas fa-comment-dots me-1"></i>Ask your question
-                                        </label>
-                                    </div>
-                                    <div class="input-group">
-                                        <textarea id="question-input" class="form-control border-0" 
-                                               placeholder="Type your question here... (e.g., 'Explain the main concept', 'Summarize this chapter', 'What are the key points?')" 
-                                               rows="2" style="resize: none; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></textarea>
-                                        <button class="btn btn-light ms-3 px-4" onclick="askQuestion()" 
-                                                style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-weight: 600;">
-                                            <i class="fas fa-paper-plane me-1"></i> Send
-                                        </button>
-                                    </div>
-                                </div>
+                    </div>
+
+                    <!-- Compact Input Area -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-3">
+                            <div class="mb-2">
+                                <label for="question-input" class="form-label small fw-bold text-primary mb-1">
+                                    <i class="fas fa-comment-dots me-1"></i>Ask your question
+                                </label>
                             </div>
-                            <div class="row mt-3">
-                                <div class="col-md-6">
-                                    <small class="text-white-50">
-                                        <i class="fas fa-lightbulb me-1"></i> 
-                                        <strong>Tip:</strong> Select a chapter for focused answers
-                                    </small>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <div id="question-suggestions" class="d-none">
-                                        <small class="text-white-50">Quick suggestions:</small>
-                                        <div class="mt-1">
-                                            <span class="badge bg-light text-dark me-1 suggestion-badge" onclick="insertSuggestion('Summarize this chapter')">
-                                                Summary
-                                            </span>
-                                            <span class="badge bg-light text-dark me-1 suggestion-badge" onclick="insertSuggestion('What are the key concepts?')">
-                                                Key Points
-                                            </span>
-                                            <span class="badge bg-light text-dark suggestion-badge" onclick="insertSuggestion('Explain with examples')">
-                                                Examples
-                                            </span>
-                                        </div>
-                                    </div>
+                            <div class="d-flex gap-2">
+                                <textarea id="question-input" class="form-control border-1 flex-grow-1" 
+                                       placeholder="Type your question here..." 
+                                       rows="2" style="resize: none; border-radius: 8px; font-size: 14px;"></textarea>
+                                <button class="btn btn-primary px-3" onclick="askQuestion()" 
+                                        style="border-radius: 8px; min-width: 60px;">
+                                    <i class="fas fa-paper-plane"></i>
+                                    <span class="d-none d-sm-inline ms-1">Send</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Quick Suggestions -->
+                            <div class="mt-2">
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-light text-dark border suggestion-badge small" onclick="insertSuggestion('Summarize this chapter')" style="cursor: pointer;">
+                                        Summary
+                                    </span>
+                                    <span class="badge bg-light text-dark border suggestion-badge small" onclick="insertSuggestion('What are the key concepts?')" style="cursor: pointer;">
+                                        Key Points
+                                    </span>
+                                    <span class="badge bg-light text-dark border suggestion-badge small" onclick="insertSuggestion('Explain with examples')" style="cursor: pointer;">
+                                        Examples
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -319,6 +311,178 @@
 </div>
 
 {% block extra_js %}
+<style>
+/* General TOC Styles */
+.toc-container {
+    position: relative;
+    z-index: 1;
+    background: #fff !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.toc-item {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    user-select: none;
+    position: relative;
+    z-index: 2;
+    transition: background-color 0.2s ease;
+    text-decoration: none !important;
+}
+
+.toc-item:hover {
+    background-color: #f8f9fa !important;
+    text-decoration: none !important;
+}
+
+.toc-item:focus,
+.toc-item:active {
+    background-color: #e9ecef !important;
+    outline: none !important;
+    text-decoration: none !important;
+}
+
+.toc-item.active {
+    background-color: #007bff !important;
+    color: white !important;
+}
+
+.list-group-flush .list-group-item {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+}
+
+.overflow-hidden {
+    overflow: hidden !important;
+}
+
+/* Mobile Sidebar Styles */
+@media (max-width: 767.98px) {
+    #sidebar-wrapper {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 300px;
+        height: 100vh;
+        z-index: 1051;
+        transition: all 0.3s ease;
+        background: white;
+        border-right: 1px solid #dee2e6;
+        overflow-y: auto;
+    }
+    
+    #sidebar-wrapper.show {
+        left: 0;
+    }
+    
+    .mobile-sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1050;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        pointer-events: none;
+    }
+    
+    .mobile-sidebar-overlay.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+      .content-wrapper {
+        background: white;
+        border-radius: 8px;
+        margin: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toc-container {
+        max-height: 40vh !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    
+    .toc-item {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        user-select: none !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }
+    
+    .toc-item:hover {
+        background-color: #f8f9fa !important;
+    }
+    
+    #chat-messages {
+        height: 300px !important;
+    }
+}
+
+/* Compact styles for mobile */
+@media (max-width: 576px) {
+    .compact-mb {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .compact-p {
+        padding: 0.75rem !important;
+    }
+    
+    #question-input {
+        font-size: 14px;
+    }
+    
+    .suggestion-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+</style>
+
+<script>
+// Mobile Sidebar Functionality
+$(document).ready(function() {
+    $('#mobile-sidebar-toggle').click(function() {
+        $('#sidebar-wrapper').addClass('show');
+        $('#mobile-overlay').addClass('show');
+        $('body').addClass('overflow-hidden');
+    });
+    
+    $('#mobile-sidebar-close, #mobile-overlay').click(function() {
+        closeMobileSidebar();
+    });
+    
+    // Auto-close sidebar when chapter is selected on mobile
+    $('.toc-item').click(function() {
+        if ($(window).width() < 768) {
+            setTimeout(closeMobileSidebar, 300);
+        }
+    });
+    
+    function closeMobileSidebar() {
+        $('#sidebar-wrapper').removeClass('show');
+        $('#mobile-overlay').removeClass('show');
+        $('body').removeClass('overflow-hidden');
+    }
+    
+    // Auto-submit on Enter (but allow Shift+Enter for new lines)
+    $('#question-input').keydown(function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            askQuestion();
+        }
+    });
+});
+</script>
+
 <script>
 let currentChapterId = '';
 let currentChapterTitle = 'All Chapters';

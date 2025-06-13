@@ -101,6 +101,7 @@ def home(request):
 def upload_book(request):
     if request.method == 'POST' and request.FILES.get('pdf_file'):
         pdf_file = request.FILES['pdf_file']
+        custom_name = request.POST.get('book_name', '').strip()
         
         # Save the file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -113,9 +114,10 @@ def upload_book(request):
             result = processor.process_pdf()
             
             if result:
-                # Create Book instance
+                # Create Book instance with custom name
                 book = Book.objects.create(
                     title=result['filename'],
+                    custom_name=custom_name if custom_name else result['filename'],
                     file_path=temp_file_path,
                     page_count=result['page_count']
                 )
@@ -135,7 +137,7 @@ def upload_book(request):
                 return JsonResponse({
                     'status': 'success',
                     'book_id': book.id,
-                    'message': f'Successfully processed {book.title}'
+                    'message': f'Successfully processed {book.get_display_name()}'
                 })
             else:
                 return JsonResponse({
@@ -497,6 +499,128 @@ def store_question(request, book_id):
             'message': 'Question recorded in session'
         })
             
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+
+@csrf_exempt
+@login_required
+def delete_book(request, book_id):
+    """Delete a book and all its associated data"""
+    if request.method == 'POST':
+        try:
+            book = Book.objects.get(id=book_id)
+            
+            # Delete the physical file if it exists
+            if book.file_path and os.path.exists(book.file_path):
+                os.unlink(book.file_path)
+            
+            # Delete the book (this will cascade delete chapters due to foreign key)
+            book.delete()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Book deleted successfully'
+            })
+        except Book.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Book not found'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+
+@csrf_exempt
+@login_required
+def rename_book(request, book_id):
+    """Rename a book"""
+    if request.method == 'POST':
+        try:
+            book = Book.objects.get(id=book_id)
+            new_name = request.POST.get('new_name', '').strip()
+            
+            if not new_name:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Book name cannot be empty'
+                })
+            
+            book.custom_name = new_name
+            book.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Book renamed successfully',
+                'new_name': new_name
+            })
+        except Book.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Book not found'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+
+@login_required
+def download_book(request, book_id):
+    """Download the original PDF file"""
+    try:
+        book = Book.objects.get(id=book_id)
+        
+        if not book.file_path or not os.path.exists(book.file_path):
+            return HttpResponse('File not found', status=404)
+        
+        with open(book.file_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{book.get_display_name()}.pdf"'
+            return response
+            
+    except Book.DoesNotExist:
+        return HttpResponse('Book not found', status=404)
+
+@csrf_exempt
+@login_required
+def delete_profile_picture(request):
+    """Delete user's profile picture"""
+    if request.method == 'POST':
+        try:
+            profile = request.user.profile
+            
+            # Delete the physical file if it exists
+            if profile.profile_picture and hasattr(profile.profile_picture, 'path'):
+                if os.path.exists(profile.profile_picture.path):
+                    os.unlink(profile.profile_picture.path)
+            
+            # Clear the profile picture field
+            profile.profile_picture.delete(save=True)
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Profile picture deleted successfully'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    
     return JsonResponse({
         'status': 'error',
         'message': 'Invalid request method'
